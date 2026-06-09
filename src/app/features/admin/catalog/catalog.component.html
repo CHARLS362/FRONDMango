@@ -1,0 +1,642 @@
+<div class="flex-1 flex flex-col gap-8 h-full max-h-screen overflow-y-auto pr-2 pb-10 animate-fadeIn">
+  <!-- Header -->
+  <div class="flex justify-between items-center">
+    <div>
+      <h1 class="text-2xl font-black text-verde-oscuro">Panel de Gestión y Almacén</h1>
+      <p class="text-xs text-verde-oscuro/50 mt-1 font-semibold">
+        Separe y controle con flexibilidad los productos de venta (Carta) de las existencias físicas de cocina (Inventario).
+      </p>
+    </div>
+  </div>
+
+  <!-- Tabs Selector estilo Apple iOS -->
+  <div class="flex justify-start gap-2 border-b border-verde-oscuro/10 pb-1">
+    <button
+      (click)="activeTab.set('CARTA')"
+      [ngClass]="activeTab() === 'CARTA' ? 'bg-white text-verde-oscuro border-t border-x border-verde-oscuro/10' : 'text-verde-oscuro/50 hover:text-verde-oscuro hover:bg-crema/40'"
+      class="flex items-center gap-2 px-5 py-3 rounded-t-2xl font-bold text-xs transition-all cursor-pointer"
+    >
+      <lucide-icon name="shopping-bag" size="14" [ngClass]="activeTab() === 'CARTA' ? 'text-naranja' : ''"></lucide-icon>
+      Menú Comercial (La Carta)
+    </button>
+    <button
+      (click)="activeTab.set('INSUMOS')"
+      [ngClass]="activeTab() === 'INSUMOS' ? 'bg-white text-verde-oscuro border-t border-x border-verde-oscuro/10' : 'text-verde-oscuro/50 hover:text-verde-oscuro hover:bg-crema/40'"
+      class="flex items-center gap-2 px-5 py-3 rounded-t-2xl font-bold text-xs transition-all cursor-pointer"
+    >
+      <lucide-icon name="layers" size="14" [ngClass]="activeTab() === 'INSUMOS' ? 'text-[#49882C]' : ''"></lucide-icon>
+      Almacén (Insumos Físicos)
+    </button>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- TAB A: CARTA (MENÚ COMERCIAL) -->
+  <!-- ======================================================== -->
+  @if (activeTab() === 'CARTA') {
+    <div class="flex flex-col gap-6 fade-in">
+      <div class="flex justify-between items-center bg-white rounded-3xl p-5 border border-verde-oscuro/5 shadow-sm">
+        <div>
+          <h3 class="text-xs font-bold text-verde-oscuro/40 uppercase tracking-wider block">Carta de Ventas</h3>
+          <p class="text-sm font-black text-verde-oscuro mt-0.5">Define los productos del menú, precios e insumos enlazados.</p>
+        </div>
+        <button
+          (click)="showCartaForm.set(!showCartaForm())"
+          class="bg-naranja hover:bg-naranja/95 active:scale-[0.98] text-white px-4 py-2.5 rounded-2xl font-bold text-xs shadow-lg shadow-naranja/20 transition-all flex items-center gap-2 cursor-pointer"
+        >
+          <lucide-icon [name]="showCartaForm() ? 'x' : 'plus'" size="14"></lucide-icon>
+          {{ showCartaForm() ? 'Cerrar' : 'Crear Item de Carta' }}
+        </button>
+      </div>
+
+      <!-- Formulario de creación Carta -->
+      @if (showCartaForm()) {
+        <form (submit)="handleCreateCartaItem($event)" class="bg-white rounded-3xl p-6 border border-verde-oscuro/5 shadow-md flex flex-col gap-6 fade-in">
+          <h3 class="text-xs font-black text-verde-oscuro flex items-center gap-1.5 uppercase tracking-wide">
+            <lucide-icon name="sparkles" size="16" class="text-naranja"></lucide-icon> 
+            Ficha de Producto de la Carta
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <!-- Nombre -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Nombre Comercial</label>
+              <input
+                type="text"
+                [(ngModel)]="nombreCarta"
+                name="nombreCarta"
+                placeholder="Ej. Jugo de Fresa Especial"
+                class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+              />
+            </div>
+
+            <!-- Categoría -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Categoría</label>
+              <input
+                list="categoriasCartaList"
+                [(ngModel)]="categoriaCarta"
+                name="categoriaCarta"
+                placeholder="Ej. Jugos, Postres"
+                class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+              />
+              <datalist id="categoriasCartaList">
+                <option value="Jugos">Jugos</option>
+                <option value="Pasteles">Pasteles</option>
+                <option value="Empanadas">Empanadas</option>
+                <option value="Bebidas Calientes">Bebidas Calientes</option>
+              </datalist>
+            </div>
+
+            <!-- Unidad Medida -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Unidad en Carta</label>
+              <input
+                list="unidadesCartaList"
+                [(ngModel)]="unidadCarta"
+                name="unidadCarta"
+                placeholder="Ej. Vaso, Torta, Unidad"
+                class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+              />
+              <datalist id="unidadesCartaList">
+                <option value="Vaso">Vaso (Jugos procesados a demanda)</option>
+                <option value="Unidad">Unidad (Empanadas / Pasteles)</option>
+                <option value="Torta">Torta (Híbrido Torta/Tajada)</option>
+              </datalist>
+            </div>
+
+            <!-- Costo -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Costo Referencial (S/.)</label>
+              <input
+                type="number"
+                step="0.1"
+                [(ngModel)]="costoCarta"
+                name="costoCarta"
+                placeholder="3.50"
+                class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+              />
+            </div>
+
+            <!-- Precios Independientes (Torta vs General) -->
+            @if (unidadCarta === 'Torta') {
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Precio Torta Entera (S/.)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  [(ngModel)]="precioEnteraCarta"
+                  name="precioEnteraCarta"
+                  placeholder="60.00"
+                  class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+                />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Precio Tajada/Porción (S/.)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  [(ngModel)]="precioPorcionCarta"
+                  name="precioPorcionCarta"
+                  placeholder="4.50"
+                  class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+                />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Rendimiento (Tajadas por Torta)</label>
+                <input
+                  type="number"
+                  [(ngModel)]="porcionesPorUnidadCarta"
+                  name="porcionesPorUnidadCarta"
+                  placeholder="17"
+                  class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+                />
+              </div>
+            } @else {
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Precio de Venta (S/.)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  [(ngModel)]="precioGeneralCarta"
+                  name="precioGeneralCarta"
+                  placeholder="8.50"
+                  class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+                />
+              </div>
+            }
+
+            <!-- Enlace al Insumo Físico del Almacén -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Descuenta Insumo del Almacén?</label>
+              <select
+                [(ngModel)]="insumoIdCarta"
+                name="insumoIdCarta"
+                class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+              >
+                <option value="">No descuenta stock (Elaborado al instante)</option>
+                @for (ins of inventario(); track ins.id) {
+                  <option [value]="ins.id">{{ ins.nombre }} ({{ ins.unidad }})</option>
+                }
+              </select>
+            </div>
+
+            <!-- Factor de descuento (Sólo general si aplica) -->
+            @if (unidadCarta !== 'Torta' && insumoIdCarta) {
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Cantidad que descuenta del insumo</label>
+                <input
+                  type="number"
+                  step="0.05"
+                  [(ngModel)]="factorDescuentoCarta"
+                  name="factorDescuentoCarta"
+                  placeholder="1.0"
+                  class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+                />
+              </div>
+            }
+
+            <!-- Descripción -->
+            <div class="flex flex-col gap-1.5 md:col-span-3">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Descripción de la Carta</label>
+              <input
+                type="text"
+                [(ngModel)]="descripcionCarta"
+                name="descripcionCarta"
+                placeholder="Ej. Clásica empanada con masa de hojaldre rellena de carne molida sazonada."
+                class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+              />
+            </div>
+
+            <!-- Subir Imagen -->
+            <div class="flex flex-col gap-1.5 md:col-span-3">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Imagen Comercial (Opcional)</label>
+              <div class="flex items-center gap-4">
+                <input
+                  type="file"
+                  accept="image/*"
+                  (change)="handleImageUpload($event)"
+                  class="text-xs text-verde-oscuro file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#49882C] file:text-white hover:file:bg-[#49882C]/90 cursor-pointer"
+                />
+                @if (imagenCarta()) {
+                  <div class="w-12 h-12 rounded-xl overflow-hidden shadow-sm border border-verde-oscuro/10 shrink-0">
+                    <img [src]="imagenCarta()" alt="Preview" class="w-full h-full object-cover" />
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end">
+            <button
+              type="submit"
+              class="bg-verde-oscuro hover:bg-verde-oscuro/95 text-white font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer"
+            >
+              Guardar en la Carta comercial
+            </button>
+          </div>
+        </form>
+      }
+
+      <!-- Tabla de la Carta -->
+      <div class="bg-white rounded-3xl p-6 border border-verde-oscuro/5 shadow-sm">
+        <h3 class="text-xs font-bold text-verde-oscuro/45 uppercase tracking-wider mb-4">Productos en la Carta</h3>
+        
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-verde-oscuro">
+            <thead>
+              <tr class="border-b border-verde-oscuro/10 pb-2 text-[9px] font-bold text-verde-oscuro/40 uppercase tracking-wider">
+                <th class="py-2.5 w-10">Imagen</th>
+                <th>Producto</th>
+                <th>Categoría</th>
+                <th>Tipo Venta</th>
+                <th>Precio Comercial</th>
+                <th>Enlace Almacén</th>
+                <th class="text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-verde-oscuro/5 font-medium">
+              @for (prod of carta(); track prod.id) {
+                @if (prod.activo) {
+                  <tr class="hover:bg-crema/10">
+                    <td class="py-3">
+                      @if (prod.imagen) {
+                        <div class="w-8 h-8 rounded-lg overflow-hidden shadow-sm border border-verde-oscuro/10">
+                          <img [src]="prod.imagen" [alt]="prod.nombre" class="w-full h-full object-cover" />
+                        </div>
+                      } @else {
+                        <div class="w-8 h-8 rounded-lg bg-verde-oscuro/5 flex items-center justify-center text-verde-oscuro/20">
+                          <lucide-icon name="sparkles" size="12"></lucide-icon>
+                        </div>
+                      }
+                    </td>
+                    <td class="font-bold">
+                      <span class="block text-xs">{{ prod.nombre }}</span>
+                      <span class="block text-[8px] text-verde-oscuro/40 font-medium max-w-[150px] truncate" [title]="prod.descripcion">{{ prod.descripcion }}</span>
+                    </td>
+                    <td>
+                      <span class="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-verde-oscuro/5 text-verde-oscuro/60">
+                        {{ prod.categoria }}
+                      </span>
+                    </td>
+                    <td class="text-verde-oscuro/60 font-semibold">{{ prod.unidad }}</td>
+                    <td>
+                      @if (prod.unidad === 'Torta') {
+                        <div class="text-[10px]">
+                          <span class="block">Ent.: <strong class="text-black">S/.{{ (prod.precioEntera || 0).toFixed(2) }}</strong></span>
+                          <span class="block">Porc.: <strong class="text-black">S/.{{ (prod.precioPorcion || 0).toFixed(2) }}</strong></span>
+                          <span class="block text-[8px] text-gray-500">Rinde {{ prod.porcionesPorUnidad || 16 }} tajadas</span>
+                        </div>
+                      } @else {
+                        <strong>S/. {{ prod.precio.toFixed(2) }}</strong>
+                      }
+                    </td>
+                    <td class="text-[10px]">
+                      @if (getLinkedInsumo(prod.insumoId)) {
+                        <div class="text-verde-oscuro/70 leading-normal">
+                          <span class="block font-bold">{{ getLinkedInsumo(prod.insumoId)!.nombre }}</span>
+                          <span class="block text-[8px] text-gray-400">
+                            {{ prod.unidad === 'Torta' 
+                              ? 'Resta 1/' + (prod.porcionesPorUnidad || 16) + ' por porción' 
+                              : 'Resta ' + (prod.factorDescuento || 1.0) + ' por venta' }}
+                          </span>
+                        </div>
+                      } @else {
+                        <span class="text-gray-400 font-semibold text-[9px] italic">Sin stock físico (on-demand)</span>
+                      }
+                    </td>
+                    <td class="text-right">
+                      <button
+                        (click)="handleDeleteProduct(prod.id, prod.nombre)"
+                        class="text-verde-oscuro/35 hover:text-naranja p-1.5 rounded-lg hover:bg-naranja/5 transition-all cursor-pointer"
+                        title="Desactivar de la Carta"
+                      >
+                        <lucide-icon name="trash-2" size="14"></lucide-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ======================================================== -->
+  <!-- TAB B: INSUMOS (ALMACÉN FÍSICO) -->
+  <!-- ======================================================== -->
+  @if (activeTab() === 'INSUMOS') {
+    <div class="flex flex-col gap-6 fade-in">
+      <div class="flex justify-between items-center bg-white rounded-3xl p-5 border border-verde-oscuro/5 shadow-sm">
+        <div>
+          <h3 class="text-xs font-bold text-verde-oscuro/40 uppercase tracking-wider block">Existencias de Almacén</h3>
+          <p class="text-sm font-black text-verde-oscuro mt-0.5">Controla las cantidades físicas en stock, costos y alertas críticas.</p>
+        </div>
+        <button
+          (click)="showInsumoForm.set(!showInsumoForm())"
+          class="bg-[#49882C] hover:bg-[#49882C]/90 text-white px-4 py-2.5 rounded-2xl font-bold text-xs shadow-lg shadow-[#49882C]/20 transition-all flex items-center gap-2 cursor-pointer"
+        >
+          <lucide-icon [name]="showInsumoForm() ? 'x' : 'plus'" size="14"></lucide-icon>
+          {{ showInsumoForm() ? 'Cerrar' : 'Crear Insumo en Almacén' }}
+        </button>
+      </div>
+
+      <!-- Formulario de creación Insumo -->
+      @if (showInsumoForm()) {
+        <form (submit)="handleCreateInsumoItem($event)" class="bg-white rounded-3xl p-6 border border-verde-oscuro/5 shadow-md flex flex-col gap-6 fade-in">
+          <h3 class="text-xs font-black text-verde-oscuro flex items-center gap-1.5 uppercase tracking-wide">
+            <lucide-icon name="sparkles" size="16" class="text-[#49882C]"></lucide-icon>
+            Ficha de Insumo Físico
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <!-- Nombre Insumo -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Nombre del Insumo</label>
+              <input
+                type="text"
+                [(ngModel)]="nombreInsumo"
+                name="nombreInsumo"
+                placeholder="Ej. Torta de Chocolate o Papaya"
+                class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+              />
+            </div>
+
+            <!-- Unidad de medida almacén -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Unidad Física</label>
+              <input
+                list="unidadesList"
+                [(ngModel)]="unidadInsumo"
+                name="unidadInsumo"
+                placeholder="Ej. Kg, Caja (30u), Litro"
+                class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+              />
+              <datalist id="unidadesList">
+                <option value="Kg">Kilogramos (Kg)</option>
+                <option value="Unidad">Unidades (Empanadas/Botellas)</option>
+                <option value="Caja">Caja</option>
+                <option value="Saco">Saco</option>
+                <option value="Torta">Tortas Completas (Entero/Stock)</option>
+                <option value="Litro">Litros (Lt)</option>
+              </datalist>
+            </div>
+
+            <!-- Costo Insumo -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Precio de Compra (S/.)</label>
+              <input
+                type="number"
+                step="0.1"
+                [(ngModel)]="costoInsumo"
+                name="costoInsumo"
+                placeholder="30.00"
+                class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+              />
+            </div>
+
+            <!-- Stock Inicial -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Cantidad de Stock Físico</label>
+              <input
+                type="number"
+                step="0.1"
+                [(ngModel)]="stockInsumo"
+                name="stockInsumo"
+                placeholder="Ej. 10 (cajas), 30 (unidades)"
+                class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+              />
+            </div>
+
+            <!-- Stock Mínimo -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Stock Mínimo (Alerta)</label>
+              <input
+                type="number"
+                step="0.1"
+                [(ngModel)]="stockMinimoInsumo"
+                name="stockMinimoInsumo"
+                placeholder="2"
+                class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+              />
+            </div>
+
+            <!-- Precio Venta (Opcional) -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Precio Venta (Opcional S/.)</label>
+              <input
+                type="number"
+                step="0.1"
+                [(ngModel)]="precioVentaInsumo"
+                name="precioVentaInsumo"
+                placeholder="Ej. 6.00"
+                class="w-full bg-crema/40 border border-naranja/20 focus:border-naranja rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+              />
+              <span class="text-[8px] text-gray-400">Si vendes directo del almacén</span>
+            </div>
+          </div>
+
+          <div class="flex justify-end">
+            <button
+              type="submit"
+              class="bg-verde-oscuro hover:bg-verde-oscuro/95 text-white font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer"
+            >
+              Registrar en Almacén
+            </button>
+          </div>
+        </form>
+      }
+
+      <!-- Tabla de Insumos de Almacén -->
+      <div class="bg-white rounded-3xl p-6 border border-verde-oscuro/5 shadow-sm">
+        <h3 class="text-xs font-bold text-verde-oscuro/45 uppercase tracking-wider mb-4">Insumos y Materias Primas</h3>
+        
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-verde-oscuro">
+            <thead>
+              <tr class="border-b border-verde-oscuro/10 pb-2 text-[9px] font-bold text-verde-oscuro/40 uppercase tracking-wider">
+                <th class="py-2.5">Insumo Físico</th>
+                <th>Unidad</th>
+                <th>Precio Compra</th>
+                <th>Precio Venta</th>
+                <th>Stock Real</th>
+                <th>Alerta Mín.</th>
+                <th>Equivalencia Visual</th>
+                <th class="text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-verde-oscuro/5 font-medium">
+              @for (ins of inventario(); track ins.id) {
+                @if (ins.activo) {
+                  <tr class="hover:bg-crema/10">
+                    <td class="py-3.5 font-bold text-xs">{{ ins.nombre }}</td>
+                    <td class="text-verde-oscuro/60 font-semibold">{{ ins.unidad }}</td>
+                    <td>S/. {{ ins.costo.toFixed(2) }}</td>
+                    <td class="text-naranja font-black">
+                      {{ ins.precioVentaPorcion ? 'S/. ' + ins.precioVentaPorcion.toFixed(2) : '-' }}
+                    </td>
+                    
+                    <!-- Stock Real - Celda editable -->
+                    <td>
+                      @if (directStockEditId() === ins.id) {
+                        <div class="flex items-center gap-1.5 fade-in">
+                          <input
+                            type="number"
+                            step="0.05"
+                            [(ngModel)]="directStockValue"
+                            class="w-16 bg-crema border border-verde-oscuro/15 rounded-lg px-2 py-1 text-xs font-black text-verde-oscuro outline-none"
+                          />
+                          <button
+                            (click)="handleSaveDirectStock(ins.id)"
+                            class="bg-[#49882C] text-white p-1 rounded-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                            title="Guardar stock"
+                          >
+                            <lucide-icon name="save" size="10"></lucide-icon>
+                          </button>
+                          <button
+                            (click)="directStockEditId.set(null); directStockValue = ''"
+                            class="bg-naranja text-white p-1 rounded-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                            title="Cancelar"
+                          >
+                            <lucide-icon name="x" size="10"></lucide-icon>
+                          </button>
+                        </div>
+                      } @else {
+                        <div class="flex items-center gap-2 group/stock">
+                          <span [ngClass]="isLowStock(ins) ? 'text-naranja' : 'text-verde-oscuro'" class="font-black text-xs">
+                            {{ ins.stock.toFixed(2).endsWith('.00') ? ins.stock.toFixed(0) : ins.stock.toFixed(3) }}
+                          </span>
+                          <button
+                            (click)="directStockEditId.set(ins.id); directStockValue = ins.stock.toString()"
+                            class="opacity-0 group-hover/stock:opacity-100 text-verde-oscuro/45 hover:text-naranja p-0.5 transition-opacity cursor-pointer"
+                            title="Modificar stock directamente"
+                          >
+                            <lucide-icon name="edit-2" size="10"></lucide-icon>
+                          </button>
+                        </div>
+                      }
+                    </td>
+                    
+                    <!-- Alerta mínima -->
+                    <td class="text-gray-400 font-semibold">{{ ins.stockMinimo }}</td>
+
+                    <!-- Equivalencia Visual -->
+                    <td class="text-[10px] font-black text-[#49882C] uppercase tracking-wider">
+                      {{ getStockVisual(ins) }}
+                    </td>
+
+                    <!-- Acciones -->
+                    <td class="text-right">
+                      <div class="flex gap-2 justify-end">
+                        <button
+                          (click)="showStockModal.set(ins.id)"
+                          class="bg-crema hover:bg-[#FFD256]/30 text-verde-oscuro border border-verde-oscuro/10 px-2.5 py-1.5 rounded-lg text-[10px] font-extrabold flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                          title="Recibir Stock"
+                        >
+                          <lucide-icon name="arrow-up-right" size="10"></lucide-icon> + 
+                        </button>
+                        <button
+                          (click)="showWithdrawModal.set(ins.id)"
+                          class="bg-crema hover:bg-naranja/20 text-naranja border border-naranja/10 px-2.5 py-1.5 rounded-lg text-[10px] font-extrabold flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                          title="Retirar Stock"
+                        >
+                          - Retirar
+                        </button>
+                        <button
+                          (click)="handleDeleteInsumo(ins.id, ins.nombre)"
+                          class="text-verde-oscuro/35 hover:text-naranja p-1.5 rounded-lg hover:bg-naranja/5 transition-all cursor-pointer"
+                          title="Eliminar insumo"
+                        >
+                          <lucide-icon name="trash-2" size="14"></lucide-icon>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL RECEPCIÓN STOCK -->
+  @if (showStockModal()) {
+    <div class="fixed inset-0 z-40 flex items-center justify-center bg-verde-oscuro/45 backdrop-blur-sm fade-in">
+      <div class="bg-crema rounded-3xl border border-verde-oscuro/10 p-8 shadow-2xl max-w-sm w-full fade-in">
+        <h3 class="text-lg font-black text-verde-oscuro mb-1.5 flex items-center gap-2">
+          <lucide-icon name="plus" size="16" class="text-[#49882C]"></lucide-icon>
+          Recepción de Mercadería
+        </h3>
+        <p class="text-xs text-verde-oscuro/50 font-medium mb-6">
+          Ingrese la cantidad recibida del proveedor para sumar al stock actual.
+        </p>
+        
+        <div class="flex flex-col gap-1.5 mb-6">
+          <label class="text-[10px] font-bold text-verde-oscuro/70 uppercase">Cantidad a sumar</label>
+          <input
+            type="number"
+            [(ngModel)]="stockToReceive"
+            class="w-full bg-white border border-verde-oscuro/10 focus:border-[#49882C] rounded-2xl py-3 px-4 text-sm font-bold text-verde-oscuro outline-none transition-all"
+          />
+        </div>
+
+        <div class="flex gap-3">
+          <button
+            (click)="showStockModal.set(null)"
+            class="flex-1 bg-white hover:bg-gray-100 border border-gray-300 py-3 rounded-2xl font-bold text-xs text-gray-700 active:scale-95 transition-all text-center cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            (click)="handleStockReception()"
+            class="flex-1 bg-[#49882C] hover:bg-[#49882C]/90 py-3 rounded-2xl font-bold text-xs text-white shadow-lg active:scale-95 transition-all text-center cursor-pointer"
+          >
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL RETIRAR/MERMA STOCK -->
+  @if (showWithdrawModal()) {
+    <div class="fixed inset-0 z-40 flex items-center justify-center bg-verde-oscuro/45 backdrop-blur-sm fade-in">
+      <div class="bg-crema rounded-3xl border border-verde-oscuro/10 p-8 shadow-2xl max-w-sm w-full fade-in">
+        <h3 class="text-lg font-black text-verde-oscuro mb-1.5 flex items-center gap-2">
+          <lucide-icon name="minus" size="16" class="text-naranja"></lucide-icon>
+          Retiro de Mercadería / Merma
+        </h3>
+        <p class="text-xs text-verde-oscuro/50 font-medium mb-6">
+          Ingrese la cantidad a retirar del almacén físico (mermas, uso interno, etc.).
+        </p>
+        
+        <div class="flex flex-col gap-1.5 mb-6">
+          <label class="text-[10px] font-bold text-verde-oscuro/70 uppercase">Cantidad a restar</label>
+          <input
+            type="number"
+            [(ngModel)]="stockToWithdraw"
+            class="w-full bg-white border border-verde-oscuro/10 focus:border-naranja rounded-2xl py-3 px-4 text-sm font-bold text-verde-oscuro outline-none transition-all"
+          />
+        </div>
+
+        <div class="flex gap-3">
+          <button
+            (click)="showWithdrawModal.set(null)"
+            class="flex-1 bg-white hover:bg-gray-100 border border-gray-300 py-3 rounded-2xl font-bold text-xs text-gray-700 active:scale-95 transition-all text-center cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            (click)="handleStockWithdraw()"
+            class="flex-1 bg-naranja hover:bg-naranja/90 py-3 rounded-2xl font-bold text-xs text-white shadow-lg active:scale-95 transition-all text-center cursor-pointer"
+          >
+            Guardar Retiro
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

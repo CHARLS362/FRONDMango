@@ -1,0 +1,640 @@
+<div class="flex-1 flex gap-6 lg:gap-8 h-full max-h-screen overflow-hidden flex-col lg:flex-row">
+  <!-- SECCIÓN IZQUIERDA: CATÁLOGO -->
+  <div [ngClass]="showCartOnMobile() ? 'hidden lg:flex' : 'flex'"
+    class="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 pb-24 lg:pb-10">
+    <!-- Banner de Producto Estrella / Fruta de Temporada -->
+    @if (activeFruit()) {
+    <div
+      class="bg-[#FFD256] rounded-3xl p-6 border border-verde-oscuro/5 relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+      <div class="absolute right-0 top-0 w-32 h-32 rounded-full bg-naranja/10 blur-xl pointer-events-none"></div>
+
+      <div class="z-10">
+        <div
+          class="inline-flex items-center gap-1.5 bg-naranja text-crema text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md mb-2">
+          <lucide-icon name="star" size="10" class="fill-current text-crema"></lucide-icon>
+          Temporada de {{ activeFruit()?.nombre }}
+        </div>
+        <h2 class="text-xl font-black text-verde-oscuro">¡Fruta Estrella Activa!</h2>
+        <p class="text-xs text-verde-oscuro/70 mt-1 max-w-md font-semibold">
+          Mayo se refresca con {{ activeFruit()?.nombre }} seleccionado. Sugiere las especialidades del menú comercial.
+        </p>
+      </div>
+
+      <!-- Listado Rápido -->
+      <div class="flex gap-2 z-10 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+        @for (p of starProducts(); track p.id) {
+        <button (click)="handleAddToCart(p.id, 'GENERAL')"
+          class="bg-crema/90 hover:bg-crema hover:scale-105 active:scale-95 px-3 py-2.5 rounded-xl text-left border border-verde-oscuro/5 transition-all flex flex-col justify-between min-w-[125px] max-w-[135px] shrink-0 cursor-pointer">
+          <p class="text-[10px] font-extrabold text-verde-oscuro truncate">{{ p.nombre }}</p>
+          <p class="text-[11px] font-black text-naranja mt-1.5">S/ {{ p.precio.toFixed(2) }}</p>
+        </button>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- Selector de Categorías -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+      <div
+        class="flex gap-1.5 bg-verde-oscuro/5 p-1.5 rounded-2xl border border-verde-oscuro/5 overflow-x-auto scrollbar-none max-w-full w-full sm:w-auto">
+        @for (cat of categories; track cat) {
+        <button (click)="handleCategoryChange(cat)"
+          [ngClass]="activeCategory() === cat ? 'bg-white text-verde-oscuro shadow-sm' : 'text-verde-oscuro/60 hover:text-verde-oscuro'"
+          class="px-5 py-3 sm:px-8 sm:py-4 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider transition-all cursor-pointer shrink-0">
+          {{ cat }}
+        </button>
+        }
+      </div>
+
+      <div class="text-left sm:text-right shrink-0">
+        <span class="text-[9px] sm:text-[10px] font-black text-verde-oscuro/40 uppercase tracking-wider block">Mes de
+          Operación</span>
+        <span class="text-xs sm:text-sm font-black text-[#49882C] uppercase">Mayo (Simulado)</span>
+      </div>
+    </div>
+
+    <!-- Grilla de Catálogo -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      @for (prod of filteredProducts(); track prod.id) {
+      <div (click)="prod.unidad !== 'Torta' ? handleAddToCart(prod.id, 'GENERAL') : null" [ngClass]="{
+            'bg-amarillo border-amarillo/20 hover:shadow-amarillo/10 cursor-pointer': prod.categoria === 'Jugos',
+            'bg-[#FFFDF6] border-[#FF8E25]/15 hover:shadow-[#FF8E25]/5 cursor-pointer': prod.categoria === 'Pasteles',
+            'bg-[#EAF4E8] border-[#49882C]/20 hover:shadow-[#49882C]/10 cursor-pointer': prod.categoria === 'Empanadas',
+            'bg-white border-verde-oscuro/5 hover:shadow-verde-oscuro/5': prod.categoria !== 'Jugos' && prod.categoria !== 'Pasteles' && prod.categoria !== 'Empanadas'
+          }"
+        class="rounded-[28px] p-5 border flex flex-col justify-between hover:shadow-xl transition-all duration-300 group active:scale-[0.99] select-none">
+        <div>
+          <!-- Imagen Comercial -->
+          @if (prod.imagen) {
+          <div class="w-full h-36 rounded-2xl overflow-hidden mb-4 shadow-sm border border-verde-oscuro/5">
+            <img [src]="prod.imagen" [alt]="prod.nombre"
+              class="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+          </div>
+          } @else {
+          <!-- Fallback placeholder premium si no hay imagen -->
+          <div
+            class="w-full h-36 rounded-2xl bg-verde-oscuro/5 mb-4 flex items-center justify-center text-verde-oscuro/20 border border-dashed border-verde-oscuro/10">
+            <lucide-icon name="sparkles" size="24"></lucide-icon>
+          </div>
+          }
+
+          <!-- Info Superior (Categoría y Stock Bajo) -->
+          <div class="flex justify-between items-center mb-1.5">
+            <span class="text-[10px] font-black uppercase tracking-wider text-verde-oscuro/50">
+              {{ prod.categoria }}
+            </span>
+            @if (isLowStock(prod)) {
+            <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-naranja text-white animate-pulse">
+              Stock Bajo
+            </span>
+            }
+          </div>
+
+          <!-- Título del Producto -->
+          <h3 class="text-lg font-black text-verde-oscuro leading-tight mb-1">
+            {{ prod.nombre }}
+          </h3>
+
+          <!-- Descripción (Ingredientes o Detalles) -->
+          <p class="text-[11px] font-semibold text-verde-oscuro/65 leading-relaxed line-clamp-2 mb-2 min-h-8">
+            {{ prod.descripcion }}
+          </p>
+
+          <!-- Stock Visual Humanizado -->
+          <span class="text-[10px] font-bold text-verde-oscuro/40 block mb-4 uppercase tracking-wider">
+            Disp: <strong [ngClass]="isLowStock(prod) ? 'text-naranja' : 'text-verde-oscuro/70'">{{ getStockVisual(prod)
+              }}</strong>
+          </span>
+        </div>
+
+        <!-- Acción de Precios y Agregar -->
+        <div>
+          @if (prod.unidad === 'Torta') {
+          <!-- Torta Especial (Precios Híbridos Independientes) -->
+          <div class="flex flex-col gap-2 pt-3 border-t border-verde-oscuro/10">
+            <div class="flex justify-between items-center">
+              <div class="flex flex-col">
+                <span class="text-[10px] text-verde-oscuro/50 font-black uppercase tracking-wider">Entera</span>
+                <span class="text-base font-black text-verde-oscuro">S/ {{ (prod.precioEntera || 0).toFixed(2) }}</span>
+              </div>
+              <button (click)="$event.stopPropagation(); handleAddToCart(prod.id, 'ENTERA')"
+                [disabled]="isOutOfStock(prod, 'ENTERA')"
+                [ngClass]="!isOutOfStock(prod, 'ENTERA') ? 'bg-verde-oscuro text-crema hover:bg-verde-oscuro/90 shadow' : 'bg-gray-100 text-gray-400 cursor-not-allowed'"
+                class="text-[10px] font-black uppercase px-3.5 py-2.5 rounded-xl transition-all cursor-pointer">
+                ENTERA +
+              </button>
+            </div>
+
+            <div class="flex justify-between items-center">
+              <div class="flex flex-col">
+                <span class="text-[10px] text-verde-oscuro/50 font-black uppercase tracking-wider">Porción (1/{{
+                  prod.porcionesPorUnidad || 16 }})</span>
+                <span class="text-base font-black text-verde-oscuro">S/ {{ (prod.precioPorcion || 0).toFixed(2)
+                  }}</span>
+              </div>
+              <button (click)="$event.stopPropagation(); handleAddToCart(prod.id, 'PORCION')"
+                [disabled]="isOutOfStock(prod, 'PORCION')"
+                [ngClass]="!isOutOfStock(prod, 'PORCION') ? 'bg-white text-verde-oscuro hover:bg-verde-oscuro/5 border border-verde-oscuro/20 shadow-sm' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'"
+                class="text-[10px] font-black uppercase px-3.5 py-2.5 rounded-xl transition-all cursor-pointer">
+                TAJADA +
+              </button>
+            </div>
+          </div>
+          } @else {
+          <!-- Venta General (Jugos, Empanadas) -->
+          <div class="flex justify-between items-center pt-3 border-t border-verde-oscuro/10">
+            <div class="flex flex-col">
+              <span class="text-[10px] text-verde-oscuro/50 font-black uppercase tracking-wider">PRECIO</span>
+              <span class="text-xl font-black text-verde-oscuro">S/ {{ prod.precio.toFixed(2) }}</span>
+            </div>
+            <div
+              class="flex items-center gap-1.5 bg-verde-oscuro text-[#FFFDF6] hover:bg-verde-oscuro/90 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-wider shadow-sm transition-all active:scale-95">
+              <span>AGREGAR</span>
+              <lucide-icon name="plus" size="11" class="stroke-3"></lucide-icon>
+            </div>
+          </div>
+          }
+        </div>
+      </div>
+      }
+    </div>
+
+    <!-- Floating Mobile Cart Bar -->
+    @if (carrito().length > 0 && !showCartOnMobile()) {
+    <div class="lg:hidden fixed bottom-6 left-6 right-6 z-30 fade-in">
+      <button (click)="showCartOnMobile.set(true)"
+        class="w-full bg-naranja hover:bg-naranja/95 active:scale-[0.98] text-white font-black py-4 px-6 rounded-2xl flex items-center justify-between shadow-xl shadow-naranja/20 transition-all cursor-pointer">
+        <div class="flex items-center gap-2.5">
+          <lucide-icon name="shopping-bag" size="18" class="stroke-3"></lucide-icon>
+          <span class="text-sm uppercase tracking-wider">Ver Carrito</span>
+          <span class="bg-white/20 text-xs px-2 py-0.5 rounded-full font-black">
+            {{ carrito().length }} {{ carrito().length === 1 ? 'ítem' : 'ítems' }}
+          </span>
+        </div>
+        <span class="text-base font-black">S/ {{ displayTotal().toFixed(2) }}</span>
+      </button>
+    </div>
+    }
+  </div>
+
+  <!-- SECCIÓN DERECHA: CARRITO Y OPERACIONES -->
+  <div [ngClass]="showCartOnMobile() ? 'flex' : 'hidden lg:flex'"
+    class="w-full lg:w-[430px] bg-white rounded-3xl border border-verde-oscuro/5 shadow-2xl flex flex-col justify-between overflow-hidden shrink-0 h-full">
+
+    <!-- Header del Carrito -->
+    <div class="p-4 border-b border-verde-oscuro/5 bg-crema/40 flex flex-col gap-3 shrink-0">
+      <!-- Botón para regresar al menú en móviles -->
+      <button (click)="showCartOnMobile.set(false)"
+        class="lg:hidden flex items-center gap-1.5 text-xs font-black text-verde-oscuro/70 hover:text-naranja cursor-pointer mr-auto mb-1">
+        <lucide-icon name="arrow-left" size="14" class="stroke-3"></lucide-icon>
+        Regresar al Catálogo
+      </button>
+
+      <div class="flex justify-between items-center">
+        <h2 class="text-sm font-black text-verde-oscuro flex items-center gap-2">
+          <lucide-icon name="shopping-bag" size="18" class="text-naranja"></lucide-icon>
+          Carrito de Compras
+        </h2>
+        @if (carrito().length > 0) {
+        <button (click)="handleClearCart()" class="text-xs font-black text-[#FF8E25] hover:underline cursor-pointer">
+          Limpiar
+        </button>
+        }
+      </div>
+
+      <!-- Toggle de Modo Servicio y Cola de Pedidos en formato ultra-compacto -->
+      <div class="flex flex-col gap-2">
+        <!-- Modo de Servicio -->
+        <div class="grid grid-cols-2 gap-1 bg-verde-oscuro/5 p-0.5 rounded-xl border border-verde-oscuro/5">
+          <button (click)="handleServiceModeChange('LLEVAR')"
+            [ngClass]="modoServicio() === 'LLEVAR' ? 'bg-white text-verde-oscuro shadow-sm' : 'text-verde-oscuro/50 hover:text-verde-oscuro'"
+            class="flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-black text-[11px] transition-all cursor-pointer">
+            <lucide-icon name="coins" size="11"></lucide-icon>
+            Para Llevar
+          </button>
+          <button (click)="handleServiceModeChange('MESA')"
+            [ngClass]="modoServicio() === 'MESA' ? 'bg-white text-verde-oscuro shadow-sm' : 'text-verde-oscuro/50 hover:text-verde-oscuro'"
+            class="flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-black text-[11px] transition-all cursor-pointer">
+            <lucide-icon name="utensils" size="11"></lucide-icon>
+            Consumo Local
+          </button>
+        </div>
+
+        <!-- Cola de Pedidos Inline -->
+        <div class="flex items-center gap-2 bg-white/60 p-1.5 rounded-xl border border-verde-oscuro/5">
+          <span class="text-[9px] font-black text-verde-oscuro/40 uppercase tracking-wider shrink-0">
+            Cola Pedidos:
+          </span>
+
+          <div class="flex items-center gap-1.5 overflow-x-auto scrollbar-none flex-1 py-0.5">
+            <!-- Botón + Nuevo Pedido -->
+            <button (click)="handleCreateOrder()"
+              class="w-9 h-9 rounded-full bg-naranja hover:bg-naranja/95 hover:scale-105 active:scale-95 text-white font-black text-base flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-sm"
+              title="Nuevo Pedido">
+              +
+            </button>
+
+            <!-- Pedidos Abiertos -->
+            @for (o of ordenesActivas(); track o.id) {
+            @if (o.modoServicio === modoServicio()) {
+            <button (click)="handleSelectOrder(pedidoSeleccionadoId() === o.id ? null : o.id)"
+              [title]="o.enviadoCocina ? 'Pedido #' + o.id + ' – En preparación' : 'Pedido #' + o.id + ' – Pre-Orden'"
+              [ngClass]="[
+                    pedidoSeleccionadoId() === o.id
+                      ? 'bg-verde-oscuro text-[#FFFDF6] border-none shadow-md scale-105'
+                      : o.enviadoCocina
+                      ? 'bg-[#49882C]/10 border border-[#49882C] text-[#49882C] hover:bg-[#49882C]/15'
+                      : o.carrito.length > 0
+                      ? 'bg-naranja/5 border border-naranja/30 text-naranja hover:bg-naranja/10'
+                      : 'bg-crema/40 border border-verde-oscuro/10 text-verde-oscuro/50 hover:bg-gray-50'
+                  ]"
+              class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black transition-all shrink-0 relative cursor-pointer">
+              {{ o.id }}
+              @if (o.enviadoCocina && pedidoSeleccionadoId() !== o.id) {
+              <span
+                class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#49882C] border border-white"></span>
+              }
+              @if (!o.enviadoCocina && o.carrito.length > 0 && pedidoSeleccionadoId() !== o.id) {
+              <span
+                class="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-naranja border border-white animate-pulse"></span>
+              }
+            </button>
+            }
+            }
+            @if (ordenesActivas().length === 0) {
+            <span class="text-[9px] text-verde-oscuro/35 font-semibold">Sin pedidos activos.</span>
+            }
+          </div>
+
+          @if (pedidoSeleccionadoId()) {
+          <span class="text-[10px] font-black text-[#49882C] bg-[#49882C]/10 px-2 py-0.5 rounded-md shrink-0 uppercase">
+            N° {{ pedidoSeleccionadoId() }}
+          </span>
+          }
+        </div>
+      </div>
+
+      <!-- Recordatorio Inline de Caja Cerrada -->
+      @if (!cajaAbierta()) {
+      <div
+        class="bg-[#FF8E25]/10 border border-[#FF8E25]/20 rounded-xl p-2.5 flex items-center justify-between gap-2 fade-in">
+        <div class="flex items-center gap-1.5 text-naranja font-black text-[9px] uppercase tracking-wider">
+          <lucide-icon name="alert-circle" size="12"></lucide-icon>
+          <span>Caja Cerrada</span>
+        </div>
+        <button (click)="showAbrirCajaModal.set(true)"
+          class="bg-naranja hover:bg-naranja/90 text-white font-extrabold text-[9px] px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-sm active:scale-95">
+          Aperturar
+        </button>
+      </div>
+      }
+    </div>
+
+    <!-- Listado del Carrito (Scrollable) -->
+    <div class="flex-1 overflow-y-auto pl-6 pr-4 py-4 flex flex-col gap-4">
+
+      <!-- Card de Datos del Cliente y Preparación (Collapsible) -->
+      @if (pedidoSeleccionadoId() !== null) {
+      <div
+        class="bg-crema/20 rounded-2xl border border-verde-oscuro/10 overflow-hidden shrink-0 transition-all duration-200">
+        <!-- Encabezado Tapping de la Card -->
+        <button (click)="showCustomerDetails.set(!showCustomerDetails())"
+          class="w-full px-4 py-3 flex justify-between items-center text-left hover:bg-crema/30 active:bg-crema/45 transition-all cursor-pointer">
+          <div class="flex items-center gap-2">
+            <lucide-icon name="user" size="14" class="text-naranja"></lucide-icon>
+            <span class="text-[10px] font-black text-verde-oscuro uppercase tracking-wider">
+              Datos de la Orden
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <!-- Resumen Dinámico -->
+            <span
+              class="text-[9px] font-bold text-verde-oscuro/60 bg-white/70 px-2 py-0.5 rounded-md border border-verde-oscuro/5 truncate max-w-[180px]">
+              {{ activeOrder()?.clienteNombre || 'Cliente General' }}
+              @if (modoServicio() === 'LLEVAR') {
+              | {{ activeOrder()?.empaque === 'VASO' ? 'Vaso' : 'Bolsa' }}
+              }
+            </span>
+            <lucide-icon [name]="showCustomerDetails() ? 'chevron-up' : 'chevron-down'" size="14"
+              class="text-verde-oscuro/50 transition-transform duration-200"></lucide-icon>
+          </div>
+        </button>
+
+        <!-- Inputs (Visibles si está Expandido) -->
+        @if (showCustomerDetails()) {
+        <div class="p-4 bg-white border-t border-verde-oscuro/10 flex flex-col gap-3.5 fade-in">
+          <div class="flex flex-col gap-1">
+            <label class="text-[9px] font-black text-verde-oscuro/50 uppercase leading-none">
+              Cliente (Nombre/DNI)
+            </label>
+            <input type="text" placeholder="Ej. Carlos Mendoza / DNI" [ngModel]="activeOrder()?.clienteNombre"
+              (ngModelChange)="handleUpdateOrderData($event, activeOrder()?.observaciones || '')"
+              class="bg-crema/20 text-verde-oscuro border border-verde-oscuro/15 focus:border-naranja rounded-xl px-3 py-2.5 text-xs font-bold outline-none transition-all" />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-[9px] font-black text-verde-oscuro/50 uppercase leading-none">
+              Notas / Observaciones de Preparación
+            </label>
+            <input type="text" placeholder="Ej. Jugo helado y sin azúcar..." [ngModel]="activeOrder()?.observaciones"
+              (ngModelChange)="handleUpdateOrderData(activeOrder()?.clienteNombre || '', $event)"
+              class="bg-crema/20 text-verde-oscuro border border-verde-oscuro/15 focus:border-naranja rounded-xl px-3 py-2.5 text-xs font-bold outline-none transition-all" />
+          </div>
+
+          @if (activeOrder()?.modoServicio === 'LLEVAR') {
+          <div class="flex flex-col gap-1.5 pt-2.5 border-t border-dashed border-verde-oscuro/10">
+            <label class="text-[9px] font-black text-verde-oscuro/50 uppercase leading-none mb-1">
+              Empaque del Pedido
+            </label>
+            <div class="grid grid-cols-2 gap-1 bg-verde-oscuro/5 p-1 rounded-xl border border-verde-oscuro/5">
+              <button (click)="handleEmpaqueChange('BOLSA')"
+                [ngClass]="activeOrder()?.empaque === 'BOLSA' ? 'bg-white text-verde-oscuro shadow-sm' : 'text-verde-oscuro/60 hover:text-verde-oscuro'"
+                class="py-2 rounded-lg font-black text-[10px] uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5">
+                <lucide-icon name="shopping-bag" size="11"></lucide-icon>
+                Bolsa (S/ 0.00)
+              </button>
+              <button (click)="handleEmpaqueChange('VASO')"
+                [ngClass]="activeOrder()?.empaque === 'VASO' ? 'bg-white text-verde-oscuro shadow-sm' : 'text-verde-oscuro/60 hover:text-verde-oscuro'"
+                class="py-2 rounded-lg font-black text-[10px] uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5">
+                <lucide-icon name="cup-soda" size="11"></lucide-icon>
+                Vaso (+ S/ 1.00)
+              </button>
+            </div>
+          </div>
+          }
+        </div>
+        }
+      </div>
+      }
+
+      @if (carrito().length === 0) {
+      <div class="flex-1 flex flex-col items-center justify-center gap-3 text-center opacity-40 py-20">
+        <lucide-icon name="shopping-bag" size="48" class="text-verde-oscuro"></lucide-icon>
+        <div>
+          <p class="text-xs font-bold text-verde-oscuro">El carrito está vacío</p>
+          <p class="text-[10px] text-verde-oscuro/60 mt-1 max-w-[200px]">
+            Agregue productos del menú lateral para armar la orden.
+          </p>
+        </div>
+      </div>
+      } @else {
+      @for (item of carrito(); track $index) {
+      <div
+        class="flex items-center justify-between gap-3 pb-3 border-b border-verde-oscuro/5 hover:bg-crema/10 rounded-xl px-2 -mx-2 transition-all duration-200 fade-in">
+        <!-- Inline Served Toggle (Pedido con Mesa o Llevar) -->
+        @if ((modoServicio() === 'MESA' || modoServicio() === 'LLEVAR') && pedidoSeleccionadoId() !== null && isOrderAlreadySent()) {
+        <button (click)="handleMarkProductServed($index, !item.servido)"
+          [ngClass]="item.servido ? 'bg-[#49882C] border-[#49882C] text-white' : 'border-verde-oscuro/20 text-transparent hover:border-[#49882C] hover:text-verde-oscuro/30'"
+          class="w-5.5 h-5.5 rounded-full flex items-center justify-center border transition-all cursor-pointer"
+          [title]="item.servido ? (modoServicio() === 'LLEVAR' ? 'Entregado' : 'Despachado a mesa') : 'Pendiente'">
+          <lucide-icon name="check" size="10" strokeWidth="3"></lucide-icon>
+        </button>
+        }
+
+        <div class="flex-1 overflow-hidden">
+          <div class="flex items-center gap-2">
+            <h4 [ngClass]="item.servido ? 'line-through text-verde-oscuro/40 font-medium' : 'font-black'"
+              class="text-sm text-verde-oscuro truncate">
+              {{ item.nombre }}
+            </h4>
+            @if ((modoServicio() === 'MESA' || modoServicio() === 'LLEVAR') && pedidoSeleccionadoId() !== null && isOrderAlreadySent()) {
+            @if (item.servido) {
+            <span
+              class="text-[8px] font-black uppercase bg-[#49882C]/10 text-[#49882C] px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shrink-0">
+              <lucide-icon name="check" size="8" strokeWidth="4"></lucide-icon> SERVIDO
+            </span>
+            } @else {
+            <span
+              class="text-[8px] font-black uppercase bg-naranja/10 text-naranja px-1.5 py-0.5 rounded-md animate-pulse shrink-0">
+              EN COLA
+            </span>
+            }
+            }
+          </div>
+          <span class="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase mt-0.5">
+            @if (item.tipoVenta === 'ENTERA') {
+            <span class="text-naranja">Entera</span>
+            } @else if (item.tipoVenta === 'PORCION') {
+            <span class="text-naranja">Porción</span>
+            } @else {
+            <span class="text-[#49882C]">Unidad</span>
+            }
+            <span class="text-verde-oscuro/35">• S/ {{ item.precio.toFixed(2) }} c/u</span>
+          </span>
+        </div>
+
+        <!-- Controles de cantidad -->
+        <div class="flex items-center gap-2">
+          <div [ngClass]="item.servido ? 'opacity-30 pointer-events-none' : ''"
+            class="flex items-center bg-crema rounded-xl border border-verde-oscuro/5">
+            <button (click)="handleQuantityChange(item.productoId, item.tipoVenta, -1)"
+              class="p-2 hover:text-naranja text-verde-oscuro/55 transition-colors cursor-pointer">
+              <lucide-icon name="minus" size="10"></lucide-icon>
+            </button>
+            <span class="text-sm font-black text-verde-oscuro w-6 text-center">{{ item.cantidad }}</span>
+            <button (click)="handleQuantityChange(item.productoId, item.tipoVenta, 1)"
+              class="p-2 hover:text-[#49882C] text-verde-oscuro/55 transition-colors cursor-pointer">
+              <lucide-icon name="plus" size="10"></lucide-icon>
+            </button>
+          </div>
+
+          <button (click)="handleRemoveFromCart(item.productoId, item.tipoVenta)"
+            [ngClass]="item.servido ? 'text-verde-oscuro/10 pointer-events-none' : 'text-verde-oscuro/30 hover:text-naranja'"
+            class="p-2 transition-colors cursor-pointer">
+            <lucide-icon name="trash-2" size="12"></lucide-icon>
+          </button>
+        </div>
+      </div>
+      }
+      }
+    </div>
+
+    <!-- Checkout / Footer del Carrito -->
+    <div class="p-6 border-t border-verde-oscuro/5 bg-crema/20">
+      <div class="flex flex-col gap-2 mb-5">
+        <div class="flex justify-between items-center text-lg font-black text-verde-oscuro pt-1.5">
+          <span>TOTAL CONSUMO:</span>
+          <span class="text-3xl text-[#1C3B1E] font-black">S/ {{ displayTotal().toFixed(2) }}</span>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2.5">
+        @if (pedidoSeleccionadoId() === null) {
+        <button disabled
+          class="bg-verde-oscuro/35 text-white/50 w-full py-5 px-6 rounded-2xl font-black text-sm text-center cursor-not-allowed uppercase tracking-wider">
+          Cree o Seleccione un Pedido ( + )
+        </button>
+        } @else if (!isOrderAlreadySent()) {
+        <button (click)="handleValidarPedido()" [disabled]="carrito().length === 0"
+          [ngClass]="carrito().length === 0 ? 'bg-verde-oscuro/35 shadow-none cursor-not-allowed' : 'bg-[#49882C] hover:bg-[#49882C]/90 active:scale-[0.98] shadow-[#49882C]/20'"
+          class="flex items-center justify-center gap-3 w-full py-6 px-6 rounded-2xl font-black text-lg uppercase tracking-wider text-white shadow-lg transition-all cursor-pointer">
+          Validar Pedido
+          <lucide-icon name="arrow-right" size="20" class="stroke-3"></lucide-icon>
+        </button>
+        } @else {
+        <div class="grid grid-cols-3 gap-2.5">
+          <button (click)="handleReimprimirTicket()"
+            class="bg-verde-oscuro hover:bg-verde-oscuro/90 text-white font-black py-4.5 px-2 rounded-2xl text-xs active:scale-[0.97] transition-all cursor-pointer text-center flex flex-col items-center justify-center gap-1.5 leading-none uppercase tracking-wider">
+            <lucide-icon name="printer" size="16"></lucide-icon>
+            Ticket
+          </button>
+          <button (click)="handleSubsanarTicket()"
+            class="bg-[#49882C] hover:bg-[#49882C]/90 text-white font-black py-4.5 px-2 rounded-2xl text-xs active:scale-[0.97] transition-all cursor-pointer text-center flex flex-col items-center justify-center gap-1.5 leading-none uppercase tracking-wider">
+            <lucide-icon name="plus" size="16"></lucide-icon>
+            Subsanar
+          </button>
+          <button (click)="handlePedidoCheckoutClick()"
+            class="bg-naranja hover:bg-naranja/90 text-white font-black py-4.5 px-2 rounded-2xl text-xs shadow shadow-naranja/15 active:scale-[0.97] transition-all cursor-pointer text-center flex flex-col items-center justify-center gap-1.5 leading-none uppercase tracking-wider">
+            <lucide-icon name="dollar-sign" size="16"></lucide-icon>
+            Cobrar
+          </button>
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- APERTURA DE CAJA MODAL (INLINE REMINDER) -->
+  @if (showAbrirCajaModal()) {
+  <div class="fixed inset-0 z-40 flex items-center justify-center bg-verde-oscuro/45 backdrop-blur-sm fade-in">
+    <div class="bg-crema rounded-3xl border border-verde-oscuro/10 p-8 shadow-2xl max-w-sm w-full fade-in">
+      <h3 class="text-lg font-black text-verde-oscuro mb-1.5 flex items-center gap-2">
+        <lucide-icon name="dollar-sign" size="16" class="text-naranja"></lucide-icon>
+        Apertura de Caja
+      </h3>
+      <p class="text-xs text-verde-oscuro/50 font-medium mb-6">
+        Ingrese el monto en efectivo disponible en caja física para dar vueltos.
+      </p>
+
+      <div class="flex flex-col gap-1.5 mb-6">
+        <label class="text-[10px] font-bold text-verde-oscuro/70 uppercase">Monto Inicial (S/)</label>
+        <input type="number" [(ngModel)]="fondoInicialInput"
+          class="w-full bg-white border border-verde-oscuro/10 focus:border-naranja rounded-2xl py-3 px-4 text-sm font-bold text-verde-oscuro outline-none transition-all" />
+      </div>
+
+      <div class="flex gap-3">
+        <button (click)="showAbrirCajaModal.set(false)"
+          class="flex-1 bg-white hover:bg-gray-100 border border-gray-300 py-3 rounded-2xl font-bold text-xs text-gray-700 active:scale-95 transition-all text-center cursor-pointer">
+          Cancelar
+        </button>
+        <button (click)="handleAbrirCajaAction()"
+          class="flex-1 bg-naranja hover:bg-naranja/90 py-3 rounded-2xl font-bold text-xs text-white shadow-lg active:scale-95 transition-all text-center cursor-pointer">
+          Aperturar Turno
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- UNIFIED PEDIDO CHECKOUT MODAL (COBRAR PEDIDO) -->
+  @if (showPedidoCheckoutModal()) {
+  <div class="fixed inset-0 z-40 flex items-center justify-center bg-verde-oscuro/45 backdrop-blur-sm fade-in">
+    <div
+      class="bg-crema rounded-3xl border border-verde-oscuro/10 p-8 shadow-2xl max-w-md w-full fade-in flex flex-col gap-6">
+      <div>
+        <h3 class="text-lg font-black text-verde-oscuro mb-1.5 flex items-center gap-2">
+          <lucide-icon name="dollar-sign" size="16" class="text-naranja"></lucide-icon>
+          Procesar Cobro de Pedido #{{ pedidoSeleccionadoId() }}
+        </h3>
+        <p class="text-xs text-verde-oscuro/50 font-medium leading-relaxed">
+          Seleccione el método de pago y calcule el vuelto si es efectivo.
+        </p>
+      </div>
+
+      <!-- Resumen de Importe -->
+      <div class="bg-white rounded-2xl p-4 border border-verde-oscuro/5 flex justify-between items-center">
+        <div>
+          <span class="text-[9px] font-bold text-verde-oscuro/45 uppercase block">Total a Cobrar</span>
+          <span class="text-xs font-black text-verde-oscuro">Cliente: {{ activeOrder()?.clienteNombre || 'Sin nombre'
+            }}</span>
+        </div>
+        <span class="text-xl font-black text-black">S/ {{ orderTotal().toFixed(2) }}</span>
+      </div>
+
+      <!-- Métodos de Pago Grid -->
+      <div class="grid grid-cols-3 gap-2">
+        <button (click)="pedidoPaymentMethod.set('EFECTIVO')"
+          [ngClass]="pedidoPaymentMethod() === 'EFECTIVO' ? 'bg-verde-oscuro text-[#FFFDF6] border-none shadow' : 'bg-white text-verde-oscuro hover:bg-verde-oscuro/5 border border-verde-oscuro/5'"
+          class="py-3.5 rounded-xl font-extrabold text-xs text-center transition-all cursor-pointer flex flex-col items-center gap-1.5">
+          <lucide-icon name="coins" size="16"></lucide-icon>
+          Efectivo
+        </button>
+        <button (click)="pedidoPaymentMethod.set('YAPE_PLIN')"
+          [ngClass]="pedidoPaymentMethod() === 'YAPE_PLIN' ? 'bg-verde-oscuro text-[#FFFDF6] border-none shadow' : 'bg-white text-verde-oscuro hover:bg-verde-oscuro/5 border border-verde-oscuro/5'"
+          class="py-3.5 rounded-xl font-extrabold text-xs text-center transition-all cursor-pointer flex flex-col items-center gap-1.5">
+          <lucide-icon name="activity" size="16"></lucide-icon>
+          Yape / Plin
+        </button>
+        <button (click)="pedidoPaymentMethod.set('TARJETA')"
+          [ngClass]="pedidoPaymentMethod() === 'TARJETA' ? 'bg-verde-oscuro text-[#FFFDF6] border-none shadow' : 'bg-white text-verde-oscuro hover:bg-verde-oscuro/5 border border-verde-oscuro/5'"
+          class="py-3.5 rounded-xl font-extrabold text-xs text-center transition-all cursor-pointer flex flex-col items-center gap-1.5">
+          <lucide-icon name="credit-card" size="16"></lucide-icon>
+          Tarjeta
+        </button>
+      </div>
+
+      <!-- Input de Efectivo Recibido (Sólo si es efectivo) -->
+      @if (pedidoPaymentMethod() === 'EFECTIVO') {
+      <div class="flex flex-col gap-3 fade-in">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold text-verde-oscuro/70 uppercase">Efectivo Recibido (S/)</label>
+          <input type="number" [(ngModel)]="pedidoCashReceived"
+            class="w-full bg-white border border-verde-oscuro/10 focus:border-naranja rounded-2xl py-3 px-4 text-sm font-bold text-verde-oscuro outline-none transition-all" />
+        </div>
+
+        <!-- Botones de Vuelto Rápido -->
+        <div class="flex gap-2">
+          <button (click)="handleQuickCash(10)"
+            class="flex-1 bg-white hover:bg-gray-100 py-2 rounded-xl text-[10px] font-black text-verde-oscuro border border-verde-oscuro/5 cursor-pointer">S/
+            10</button>
+          <button (click)="handleQuickCash(20)"
+            class="flex-1 bg-white hover:bg-gray-100 py-2 rounded-xl text-[10px] font-black text-verde-oscuro border border-verde-oscuro/5 cursor-pointer">S/
+            20</button>
+          <button (click)="handleQuickCash(50)"
+            class="flex-1 bg-white hover:bg-gray-100 py-2 rounded-xl text-[10px] font-black text-verde-oscuro border border-verde-oscuro/5 cursor-pointer">S/
+            50</button>
+          <button (click)="handleQuickCash(100)"
+            class="flex-1 bg-white hover:bg-gray-100 py-2 rounded-xl text-[10px] font-black text-verde-oscuro border border-verde-oscuro/5 cursor-pointer">S/
+            100</button>
+        </div>
+
+        <!-- Vuelto Calculado -->
+        <div
+          class="flex justify-between items-center text-xs font-bold text-verde-oscuro pt-2 border-t border-dashed border-verde-oscuro/10">
+          <span>Vuelto a entregar:</span>
+          <span class="text-sm font-black text-naranja">
+            S/ {{ ( (parseFloat(pedidoCashReceived()) || 0) - orderTotal() >= 0 ? (parseFloat(pedidoCashReceived()) ||
+            0) - orderTotal() : 0 ).toFixed(2) }}
+          </span>
+        </div>
+      </div>
+      }
+
+      <!-- Acciones -->
+      <div class="flex gap-3 mt-2">
+        <button (click)="showPedidoCheckoutModal.set(false)"
+          class="flex-1 bg-white hover:bg-gray-100 border border-gray-300 py-3.5 rounded-2xl font-bold text-xs text-gray-700 active:scale-95 transition-all text-center cursor-pointer">
+          Cancelar
+        </button>
+        <button (click)="handleConfirmPedidoPayment()"
+          class="flex-1 bg-naranja hover:bg-naranja/90 py-3.5 rounded-2xl font-bold text-xs text-white shadow-lg shadow-naranja/20 active:scale-95 transition-all text-center cursor-pointer">
+          Confirmar e Imprimir Boleta
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- VIRTUAL TICKET MODAL -->
+  @if (showTicketModal() && lastTicketDetails()) {
+  <app-ticket-preview [isOpen]="showTicketModal()" [tipoTicket]="lastTicketDetails()!.tipo"
+    [ticketNumber]="lastTicketDetails()!.number" [items]="lastTicketDetails()!.items"
+    [total]="lastTicketDetails()!.total" [pagado]="lastTicketDetails()!.pagado" [vuelto]="lastTicketDetails()!.vuelto"
+    [metodoPago]="lastTicketDetails()!.metodo" [vendedor]="vendedorActivo() || ''"
+    [cliente]="lastTicketDetails()!.cliente || ''" [observaciones]="lastTicketDetails()!.observaciones || ''"
+    [modoServicio]="lastTicketDetails()!.modoServicio" [mesaId]="lastTicketDetails()!.mesaId || null"
+    [empaque]="lastTicketDetails()!.empaque"
+    (close)="showTicketModal.set(false); lastTicketDetails.set(null)"></app-ticket-preview>
+  }
+</div>

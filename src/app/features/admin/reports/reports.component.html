@@ -1,0 +1,299 @@
+<div class="flex-1 flex flex-col gap-8 h-full max-h-screen overflow-y-auto pr-2 pb-10 animate-fadeIn">
+  <!-- Header -->
+  <div>
+    <h1 class="text-2xl font-black text-verde-oscuro">Temporadas & Ajustes del Sistema</h1>
+    <p class="text-xs text-verde-oscuro/50 mt-1 font-semibold">
+      Defina el calendario de frutas, gestione la seguridad de accesos y personalice el QR de la carta.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+    <!-- FRUTAS DE TEMPORADA -->
+    <div class="bg-white rounded-3xl p-6 border border-verde-oscuro/5 flex flex-col justify-between shadow-sm">
+      <div>
+        <h3 class="text-sm font-black text-verde-oscuro mb-1 flex items-center gap-2">
+          <lucide-icon name="calendar" size="16" class="text-naranja"></lucide-icon>
+          Control de Temporada de Frutas
+        </h3>
+        <p class="text-[10px] text-verde-oscuro/50 font-medium mb-6">Configure qué meses está disponible cada fruta</p>
+
+        <div class="flex flex-col gap-4">
+          @for (f of frutasTemporada(); track f.id) {
+            <div
+              [ngClass]="f.activa ? 'bg-[#FFD256]/25 border-amarillo' : 'bg-white border-verde-oscuro/5'"
+              class="p-4 rounded-2xl border transition-all"
+            >
+              <div class="flex justify-between items-center mb-2.5">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">
+                    {{ f.nombre === 'Mango' ? '🥭' : f.nombre === 'Fresa' ? '🍓' : '🥥' }}
+                  </span>
+                  <h4 class="text-xs font-black text-verde-oscuro">{{ f.nombre }}</h4>
+                  @if (f.activa) {
+                    <span class="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-naranja text-white animate-pulse">
+                      Activa Ahora
+                    </span>
+                  }
+                </div>
+
+                @if (editingFruitId() === f.id) {
+                  <button
+                    (click)="handleSaveSeason(f.id)"
+                    class="bg-[#49882C] text-white hover:bg-[#49882C]/90 text-[10px] font-bold px-3 py-1 rounded-lg transition-all cursor-pointer"
+                  >
+                    Guardar
+                  </button>
+                } @else {
+                  <button
+                    (click)="handleEditSeasonClick(f)"
+                    class="text-[10px] font-extrabold text-verde-oscuro/60 hover:text-naranja transition-all cursor-pointer"
+                  >
+                    Configurar Duración
+                  </button>
+                }
+              </div>
+
+              @if (editingFruitId() === f.id) {
+                <div class="grid grid-cols-2 gap-3 mt-3">
+                  <div class="flex flex-col gap-1">
+                    <label class="text-[9px] font-bold text-verde-oscuro/60 uppercase">Mes Inicio</label>
+                    <select
+                      [(ngModel)]="editInicio"
+                      class="bg-crema border border-verde-oscuro/10 rounded-lg px-2 py-1 text-xs font-bold text-verde-oscuro outline-none cursor-pointer"
+                    >
+                      @for (m of monthsList; track m; let i = $index) {
+                        <option [value]="i + 1">{{ m }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label class="text-[9px] font-bold text-verde-oscuro/60 uppercase">Mes Fin</label>
+                    <select
+                      [(ngModel)]="editFin"
+                      class="bg-crema border border-verde-oscuro/10 rounded-lg px-2 py-1 text-xs font-bold text-verde-oscuro outline-none cursor-pointer"
+                    >
+                      @for (m of monthsList; track m; let i = $index) {
+                        <option [value]="i + 1">{{ m }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+              } @else {
+                <div class="flex justify-between items-baseline text-[11px] text-verde-oscuro/70 font-semibold">
+                  <span>Periodo: <strong class="text-black">{{ monthsList[f.mesInicio - 1] }}</strong> a <strong class="text-black">{{ monthsList[f.mesFin - 1] }}</strong></span>
+                  <span class="text-[9px] text-verde-oscuro/40 font-bold block">Duración: {{ f.duracionDias }} días aprox.</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- SIMULADOR DE FECHA DEL SISTEMA -->
+      <div class="mt-8 pt-6 border-t border-dashed border-verde-oscuro/15">
+        <h4 class="text-xs font-extrabold text-verde-oscuro uppercase tracking-wider mb-3">Simulación de Meses del Año</h4>
+        <p class="text-[10px] text-verde-oscuro/50 font-medium mb-4 leading-normal">
+          Cambie el mes del sistema para comprobar cómo el POS destaca dinámicamente el "Producto Estrella" en la interfaz de ventas.
+        </p>
+        <div class="grid grid-cols-4 md:grid-cols-6 gap-2">
+          @for (m of monthsList; track m; let idx = $index) {
+            <button
+              (click)="handleSimulateMonth(idx)"
+              [ngClass]="mesSimulado() === idx + 1 ? 'bg-verde-oscuro text-crema font-extrabold shadow-md' : 'bg-crema hover:bg-[#FFD256]/30 text-verde-oscuro/60 border border-verde-oscuro/5'"
+              class="py-2 text-[10px] font-bold rounded-xl transition-all cursor-pointer"
+            >
+              {{ m.slice(0, 3) }}
+            </button>
+          }
+        </div>
+
+        @if (activeFruit()) {
+          <div class="mt-4 p-3 bg-crema rounded-2xl flex items-center justify-between text-xs font-bold text-verde-oscuro border border-verde-oscuro/5 fade-in">
+            <span>Mes simulado: {{ monthsList[mesSimulado() - 1] }}</span>
+            <span class="text-[#49882C] flex items-center gap-1 font-black">
+              Fruta Activa: {{ activeFruit()?.nombre }} {{ activeFruit()?.nombre === 'Mango' ? '🥭' : '🍓' }}
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: QR & AJUSTES DE SEGURIDAD -->
+    <div class="flex flex-col gap-8">
+      <!-- QR CARTA DIGITAL -->
+      <div class="bg-white rounded-3xl p-6 border border-verde-oscuro/5 flex flex-col justify-between shadow-sm">
+        <div>
+          <h3 class="text-sm font-black text-verde-oscuro mb-1 flex items-center gap-2">
+            <lucide-icon name="qr-code" size="16" class="text-naranja"></lucide-icon>
+            Generador de Código QR - Carta Física
+          </h3>
+          <p class="text-[10px] text-verde-oscuro/50 font-medium mb-6">Genere el QR del menú digital para colocarlo en mesas o vitrinas</p>
+
+          <div class="flex flex-col gap-4 items-center">
+            <!-- QR Render de simulación -->
+            <div class="w-44 h-44 bg-white border border-verde-oscuro/10 p-4 rounded-3xl flex items-center justify-center shadow-lg relative group overflow-hidden">
+              <div class="w-full h-full bg-[radial-gradient(ellipse_at_center,var(--tw-gradient-stops))] from-verde-oscuro/10 via-transparent to-transparent flex items-center justify-center p-2">
+                <div class="w-full h-full opacity-80 grid grid-cols-10 gap-[2px]">
+                  @for (isRandom of qrGrid; track $index) {
+                    <div
+                      [ngClass]="[
+                        isCornerQR($index) ? 'bg-verde-oscuro scale-110' : '',
+                        !isCornerQR($index) && isRandom ? 'bg-verde-oscuro' : '',
+                        !isCornerQR($index) && !isRandom ? 'bg-transparent' : ''
+                      ]"
+                      class="rounded-sm transition-all duration-300"
+                    ></div>
+                  }
+                </div>
+              </div>
+              <span class="absolute w-8 h-8 rounded-lg bg-[#FFFDF6] border border-verde-oscuro/10 flex items-center justify-center text-xs font-bold text-naranja shadow shadow-black/10">
+                🥭
+              </span>
+            </div>
+
+            <!-- URL Input -->
+            <div class="flex flex-col gap-1.5 w-full mt-4">
+              <label class="text-[10px] font-bold text-verde-oscuro/70 uppercase">Enlace Web del Menú</label>
+              <input
+                type="text"
+                [(ngModel)]="menuUrl"
+                class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-8">
+          <button
+            (click)="handleExportQR()"
+            class="flex-1 bg-white hover:bg-gray-50 border border-gray-300 py-3 rounded-2xl font-bold text-xs text-gray-700 active:scale-95 transition-all cursor-pointer text-center"
+          >
+            Exportar QR
+          </button>
+          <button
+            (click)="showQRReceipt.set(true)"
+            class="flex-1 bg-naranja hover:bg-naranja/90 py-3 rounded-2xl font-bold text-xs text-white shadow-lg shadow-naranja/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <lucide-icon name="printer" size="14"></lucide-icon>
+            Imprimir QR
+          </button>
+        </div>
+      </div>
+
+      <!-- AJUSTES DE SEGURIDAD -->
+      <div class="bg-white rounded-3xl p-6 border border-verde-oscuro/5 flex flex-col justify-between shadow-sm">
+        <div>
+          <h3 class="text-sm font-black text-verde-oscuro mb-1 flex items-center gap-2">
+            <lucide-icon name="lock" size="16" class="text-naranja"></lucide-icon>
+            Seguridad y Código de Acceso
+          </h3>
+          <p class="text-[10px] text-verde-oscuro/50 font-medium mb-6">Personalice el PIN que protege las opciones administrativas del establecimiento</p>
+
+          <div class="flex flex-col gap-4">
+            <div class="flex justify-between items-center text-xs font-bold text-verde-oscuro border-b border-verde-oscuro/5 pb-2.5">
+              <span>PIN Actual:</span>
+              <span class="bg-crema border border-verde-oscuro/10 px-3 py-1 rounded-xl text-naranja font-black text-xs tracking-widest">
+                {{ claveAdministrador() }}
+              </span>
+            </div>
+
+            <div class="flex flex-col gap-1.5 mt-2">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Nuevo PIN de Acceso (4 dígitos sugeridos)</label>
+              <input
+                type="text"
+                maxLength="10"
+                [(ngModel)]="nuevaClaveInput"
+                placeholder="Ej. 5678"
+                class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none tracking-widest"
+              />
+            </div>
+          </div>
+        </div>
+
+        <button
+          (click)="handleSavePasscode()"
+          class="bg-verde-oscuro hover:bg-verde-oscuro/95 text-white font-bold text-xs py-3.5 rounded-2xl w-full mt-6 transition-all cursor-pointer active:scale-95 text-center"
+        >
+          Guardar Contraseña de Preferencia
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- HISTORIAL Y AUDITORÍAS TOTALES -->
+  <div class="bg-white rounded-3xl p-6 border border-verde-oscuro/5 shadow-sm">
+    <div class="flex justify-between items-center mb-4">
+      <div>
+        <h3 class="text-sm font-black text-verde-oscuro flex items-center gap-2">
+          <lucide-icon name="file-text" size="16" class="text-naranja"></lucide-icon>
+          Bitácora de Auditoría Completa
+        </h3>
+        <p class="text-[10px] text-verde-oscuro/50 font-medium mt-0.5">Historial inmutable del establecimiento y arqueo de caja</p>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto max-h-[300px]">
+      <table class="w-full text-left text-xs text-verde-oscuro">
+        <thead>
+          <tr class="border-b border-verde-oscuro/10 pb-2 text-[10px] font-bold text-verde-oscuro/45 uppercase tracking-wider">
+            <th class="py-2.5">Fecha</th>
+            <th>Tipo</th>
+            <th>Descripción</th>
+            <th>Usuario</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-verde-oscuro/5">
+          @for (log of auditorias(); track log.id) {
+            <tr class="hover:bg-crema/10 font-medium">
+              <td class="py-3 text-[10px] font-semibold text-verde-oscuro/50">{{ log.fecha }}</td>
+              <td>
+                <span 
+                  [ngClass]="[
+                    log.tipo === 'VENTA' ? 'bg-[#49882C]/10 text-[#49882C]' : '',
+                    log.tipo === 'STOCK' ? 'bg-naranja/10 text-naranja' : '',
+                    log.tipo === 'CAJA_APERTURA' || log.tipo === 'CAJA_CIERRE' ? 'bg-verde-oscuro/10 text-verde-oscuro' : ''
+                  ]"
+                  class="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded"
+                >
+                  {{ log.tipo }}
+                </span>
+              </td>
+              <td class="font-bold">{{ log.descripcion }}</td>
+              <td class="text-verde-oscuro/60">{{ log.detalles?.vendedor || "Vendedor" }}</td>
+            </tr>
+          }
+          @if (auditorias().length === 0) {
+            <tr>
+              <td colSpan="4" class="py-8 text-center text-[10px] text-verde-oscuro/35 font-bold">
+                No se registran auditorías históricas en el sistema. Realice transacciones en el POS.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- QR PRINT PREVIEW MODAL -->
+  @if (showQRReceipt()) {
+    <app-ticket-preview
+      [isOpen]="showQRReceipt()"
+      tipoTicket="CONTROL"
+      ticketNumber="QR-Carta"
+      [vendedor]="vendedorActivo() || 'Administrador'"
+      [total]="0"
+      [items]="[
+        {
+          productoId: 'qr-code-digital',
+          nombre: '[ Menú Digital QR - Escanear ]\\n' + menuUrl + '\\n\\n[:::\\t  :::]\\n[:::\\t  :::]\\n\\n\\n\\n\\n\\n\\n\\n\\n',
+          tipoVenta: 'GENERAL',
+          precio: 0,
+          cantidad: 1
+        }
+      ]"
+      (close)="showQRReceipt.set(false)"
+    ></app-ticket-preview>
+  }
+</div>

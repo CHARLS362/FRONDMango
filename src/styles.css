@@ -1,0 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+@import "tailwindcss";
+
+:root {
+  --background: #FFFDF6;
+  --foreground: #1C3B1E;
+  
+  /* Palette custom variables */
+  --color-crema: #FFFDF6;
+  --color-verde-oscuro: #1C3B1E;
+  --color-naranja: #FF8E25;
+  --color-amarillo: #FFD256;
+  --color-verde-acento: #49882C;
+}
+
+@theme {
+  --color-crema: var(--color-crema);
+  --color-verde-oscuro: var(--color-verde-oscuro);
+  --color-naranja: var(--color-naranja);
+  --color-amarillo: var(--color-amarillo);
+  --color-verde-acento: var(--color-verde-acento);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Outfit', system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism custom classes */
+.glassmorphism {
+  background: rgba(255, 253, 246, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(28, 59, 30, 0.08);
+}
+
+.glassmorphism-dark {
+  background: rgba(28, 59, 30, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 253, 246, 0.15);
+}
+
+.glassmorphism-light {
+  background: rgba(255, 253, 246, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(28, 59, 30, 0.1);
+}
+
+/* Custom bounce and micro-animations */
+@keyframes active-scale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.97); }
+}
+
+.animate-active-scale {
+  animation: active-scale 0.2s ease-in-out;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(28, 59, 30, 0.15);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(28, 59, 30, 0.3);
+}
+
+/* Page transitions */
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
