@@ -7,6 +7,8 @@ export interface Insumo {
   costo: number;
   precioVentaPorcion?: number; // Precio al que se vende directo del almacén
   activo: boolean;
+  categoria?: string;      // Categoría del insumo
+  temporadaId?: number;    // ID de la temporada asociada
 }
 
 export interface FruitSeason {
@@ -16,4 +18,5 @@ export interface FruitSeason {
   mesFin: number;    // 1-12
   duracionDias: number;
   activa: boolean;
+  imagen?: string;
 }

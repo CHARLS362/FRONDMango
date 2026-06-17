@@ -14,4 +14,5 @@ export interface TicketVenta {
   vuelto: number;
   empaque?: "BOLSA" | "VASO";
   recargoEmpaque?: number;
+  pedidoId?: string;
 }

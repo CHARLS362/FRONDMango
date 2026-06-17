@@ -363,6 +363,23 @@
               />
             </div>
 
+            <!-- Categoría Insumo -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Categoría</label>
+              <input
+                list="categoriasInsumoList"
+                [(ngModel)]="categoriaInsumo"
+                name="categoriaInsumo"
+                placeholder="Ej. Jugos, Postres"
+                class="w-full bg-crema/40 border border-verde-oscuro/10 focus:border-[#49882C] rounded-xl px-4 py-2.5 text-xs font-bold text-verde-oscuro outline-none"
+              />
+              <datalist id="categoriasInsumoList">
+                @for (cat of categoriasExistentes(); track cat) {
+                  <option [value]="cat">{{ cat }}</option>
+                }
+              </datalist>
+            </div>
+
             <!-- Unidad de medida almacén -->
             <div class="flex flex-col gap-1.5">
               <label class="text-[10px] font-extrabold text-verde-oscuro/70 uppercase">Unidad Física</label>
@@ -470,7 +487,14 @@
               @for (ins of inventario(); track ins.id) {
                 @if (ins.activo) {
                   <tr class="hover:bg-crema/10">
-                    <td class="py-3.5 font-bold text-xs">{{ ins.nombre }}</td>
+                    <td class="py-3.5 font-bold text-xs">
+                      <span class="block">{{ ins.nombre }}</span>
+                      @if (ins.categoria) {
+                        <span class="inline-block text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-verde-oscuro/5 text-verde-oscuro/60 mt-0.5">
+                          {{ ins.categoria }}
+                        </span>
+                      }
+                    </td>
                     <td class="text-verde-oscuro/60 font-semibold">{{ ins.unidad }}</td>
                     <td>S/. {{ ins.costo.toFixed(2) }}</td>
                     <td class="text-naranja font-black">

@@ -1,6 +1,8 @@
 import { ApplicationConfig, provideZonelessChangeDetection, importProvidersFrom } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { authInterceptor } from './core/infrastructure/auth.interceptor';
 import {
   LucideAngularModule,
   LogIn,
@@ -49,13 +51,17 @@ import {
   Layers,
   RotateCcw,
   Search,
-  CupSoda
+  CupSoda,
+  Eye,
+  EyeOff,
+  Bluetooth
 } from 'lucide-angular';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
     provideRouter(routes),
+    provideHttpClient(withInterceptors([authInterceptor])),
     importProvidersFrom(
       LucideAngularModule.pick({
         LogIn,
@@ -104,7 +110,10 @@ export const appConfig: ApplicationConfig = {
         Layers,
         RotateCcw,
         Search,
-        CupSoda
+        CupSoda,
+        Eye,
+        EyeOff,
+        Bluetooth
       })
     )
   ]

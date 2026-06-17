@@ -14,14 +14,18 @@
  */
 import { Injectable, inject } from '@angular/core';
 import { AuthStore } from '../../state/auth.store';
+import { AlertService } from './alert.service';
 import { CatalogStore } from '../../state/catalog.store';
 import { InventoryStore } from '../../state/inventory.store';
 import { OrdersStore } from '../../state/orders.store';
 import { TicketsStore } from '../../state/tickets.store';
 import type { Product } from '../domain/product.model';
 import type { Insumo, FruitSeason } from '../domain/inventory.model';
-import type { CartItem } from '../domain/order.model';
+import type { CartItem, OrdenActiva } from '../domain/order.model';
 import type { TicketVenta } from '../domain/ticket.model';
+import type { Usuario } from '../domain/user.model';
+import { ApiService } from './api.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -32,6 +36,10 @@ export class POSStateService {
   private inventoryStore = inject(InventoryStore);
   private ordersStore = inject(OrdersStore);
   private ticketsStore = inject(TicketsStore);
+  private alertService = inject(AlertService);
+  private apiService = inject(ApiService);
+
+  readonly alertState = this.alertService.alertState;
 
   // ============================================================
   // SIGNAL PROXIES — re-expose all store signals for components
@@ -39,6 +47,8 @@ export class POSStateService {
 
   // Auth
   readonly vendedorActivo = this.authStore.vendedorActivo;
+  readonly rolActivo = this.authStore.rolActivo;
+  readonly usuarios = this.authStore.usuarios;
   readonly cajaAbierta = this.authStore.cajaAbierta;
   readonly cajaFondoInicial = this.authStore.cajaFondoInicial;
   readonly cajaMetodoVentas = this.authStore.cajaMetodoVentas;
@@ -51,7 +61,7 @@ export class POSStateService {
   // Inventory
   readonly inventario = this.inventoryStore.inventario;
   readonly frutasTemporada = this.inventoryStore.frutasTemporada;
-  readonly mesSimulado = this.inventoryStore.mesSimulado;
+  readonly mesActual = this.inventoryStore.mesActual;
 
   // Orders
   readonly ordenesActivas = this.ordersStore.ordenesActivas;
@@ -68,8 +78,16 @@ export class POSStateService {
   // ACTIONS — Delegate to stores, coordinate cross-store ops
   // ============================================================
 
-  setVendedorActivo(nombre: string | null) {
-    this.authStore.setVendedorActivo(nombre);
+  setVendedorActivo(nombre: string | null, rol: 'administrador' | 'vendedor' | null = null) {
+    this.authStore.setVendedorActivo(nombre, rol);
+  }
+
+  crearUsuario(u: Usuario) {
+    this.authStore.crearUsuario(u);
+  }
+
+  eliminarUsuario(username: string) {
+    this.authStore.eliminarUsuario(username);
   }
 
   abrirCaja(fondo: number) {
@@ -100,6 +118,13 @@ export class POSStateService {
 
   crearNuevoPedido(): string {
     return this.ordersStore.crearNuevoPedido(this.vendedorActivo() || 'Vendedor');
+  }
+
+  cancelarPedido(pedidoId: string) {
+    const log = this.ordersStore.cancelarPedido(pedidoId, this.vendedorActivo());
+    if (log) {
+      this.ticketsStore.agregarAuditoria(log);
+    }
   }
 
   agregarAlCarrito(productoId: string, tipoVenta: 'GENERAL' | 'ENTERA' | 'PORCION' = 'GENERAL') {
@@ -184,7 +209,41 @@ export class POSStateService {
     };
 
     this.ticketsStore.agregarAuditoria(auditLog);
-    this.ticketsStore.agregarTicket(ticketVenta);
+
+    if (environment.useBackend) {
+      // Create a temporary completed order to satisfy the backend's constraint that tickets require a pedidoId.
+      const tempOrden: OrdenActiva = {
+        id: 'temp-' + Date.now(),
+        numeroPedido: this.ticketGlobalCorrelativo().toString(),
+        carrito: this.carrito(),
+        vendedor: this.vendedorActivo() || 'Sistema',
+        horaApertura: new Date().toLocaleTimeString(),
+        subsanadoCount: 0,
+        estado: 'SERVIDO',
+        clienteNombre: 'Venta Rápida',
+        observaciones: '',
+        modoServicio: 'LLEVAR',
+        enviadoCocina: true,
+        empaque: 'BOLSA',
+        recargoEmpaque: 0
+      };
+
+      this.apiService.crearOrden(tempOrden).subscribe({
+        next: (realPedidoId) => {
+          ticketVenta.pedidoId = realPedidoId;
+          ticketVenta.id = `PE-${realPedidoId}`;
+          this.ticketsStore.agregarTicket(ticketVenta);
+        },
+        error: (err) => {
+          console.error('Error creating temporary order for quick sale:', err);
+          // Fallback to local ticket registration
+          this.ticketsStore.agregarTicket(ticketVenta);
+        }
+      });
+    } else {
+      this.ticketsStore.agregarTicket(ticketVenta);
+    }
+
     this.ordersStore.incrementarCorrelativo();
     this.ordersStore.carrito.set([]);
     this.ordersStore.modoServicio.set('LLEVAR');
@@ -231,10 +290,12 @@ export class POSStateService {
       pagado: montoPagado,
       vuelto,
       empaque: ord.empaque,
-      recargoEmpaque: surcharge
+      recargoEmpaque: surcharge,
+      pedidoId: pedidoId
     };
 
-    this.ordersStore.eliminarOrden(pedidoId);
+    // Pass true for completed flag so it doesn't send cancel order PUT request to backend
+    this.ordersStore.eliminarOrden(pedidoId, true);
     this.ticketsStore.agregarAuditoria(auditLog);
     this.ticketsStore.agregarTicket(ticketVenta);
     this.ordersStore.carrito.set([]);
@@ -295,12 +356,33 @@ export class POSStateService {
 
   // --- Fruit Seasons ---
 
+  crearTemporadaFruta(f: Omit<FruitSeason, 'activa' | 'duracionDias'>) {
+    this.inventoryStore.crearTemporadaFruta(f);
+  }
+
+  eliminarTemporadaFruta(id: string) {
+    this.inventoryStore.eliminarTemporadaFruta(id);
+  }
+
   actualizarTemporadaFruta(id: string, fields: Partial<FruitSeason>) {
     this.inventoryStore.actualizarTemporadaFruta(id, fields);
   }
 
-  setMesSimulado(mes: number) {
-    this.inventoryStore.setMesSimulado(mes);
+
+  alert(title: string, message: string, onConfirm?: () => void) {
+    this.alertService.alert(title, message, onConfirm);
+  }
+
+  confirm(title: string, message: string, onConfirm: () => void, onCancel?: () => void) {
+    this.alertService.confirm(title, message, onConfirm, onCancel);
+  }
+
+  prompt(title: string, message: string, defaultValue: string, placeholder: string, onConfirm: (val: string) => void, onCancel?: () => void) {
+    this.alertService.prompt(title, message, defaultValue, placeholder, onConfirm, onCancel);
+  }
+
+  closeAlert() {
+    this.alertService.close();
   }
 
   // ============================================================

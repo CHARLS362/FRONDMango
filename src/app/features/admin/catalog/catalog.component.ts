@@ -19,6 +19,13 @@ export class AdminCatalogComponent {
 
   activeTab = signal<"CARTA" | "INSUMOS">("CARTA");
 
+  // Categorías existentes deducidas dinámicamente de productos e insumos
+  categoriasExistentes = computed(() => {
+    const catsFromCarta = this.carta().map(p => p.categoria).filter(Boolean);
+    const catsFromInsumos = this.inventario().map(i => i.categoria).filter((c): c is string => !!c);
+    return Array.from(new Set([...catsFromCarta, ...catsFromInsumos]));
+  });
+
   // Form State para creación/edición de CARTA
   showCartaForm = signal<boolean>(false);
   nombreCarta = '';
@@ -37,6 +44,7 @@ export class AdminCatalogComponent {
   // Form State para creación/edición de INSUMOS
   showInsumoForm = signal<boolean>(false);
   nombreInsumo = '';
+  categoriaInsumo = 'Jugos';
   unidadInsumo = 'Kg';
   stockInsumo = '';
   stockMinimoInsumo = '';
@@ -68,7 +76,7 @@ export class AdminCatalogComponent {
   handleCreateCartaItem(e: Event) {
     e.preventDefault();
     if (!this.nombreCarta || !this.costoCarta) {
-      alert("Por favor ingrese al menos el nombre y el costo del producto.");
+      this.stateService.alert("Campos incompletos", "Por favor ingrese al menos el nombre y el costo del producto.");
       return;
     }
 
@@ -109,7 +117,7 @@ export class AdminCatalogComponent {
   handleCreateInsumoItem(e: Event) {
     e.preventDefault();
     if (!this.nombreInsumo || !this.stockInsumo || !this.costoInsumo) {
-      alert("Por favor ingrese al menos el nombre, stock inicial y costo del insumo.");
+      this.stateService.alert("Campos incompletos", "Por favor ingrese al menos el nombre, stock inicial y costo del insumo.");
       return;
     }
 
@@ -121,10 +129,12 @@ export class AdminCatalogComponent {
       stockMinimo: parseFloat(this.stockMinimoInsumo) || 0,
       costo: parseFloat(this.costoInsumo) || 0,
       precioVentaPorcion: this.precioVentaInsumo ? parseFloat(this.precioVentaInsumo) : undefined,
+      categoria: this.categoriaInsumo || undefined
     });
 
     // Reset fields
     this.nombreInsumo = '';
+    this.categoriaInsumo = 'Jugos';
     this.unidadInsumo = 'Kg';
     this.stockInsumo = '';
     this.stockMinimoInsumo = '';
@@ -138,14 +148,14 @@ export class AdminCatalogComponent {
     if (!insId) return;
     const qty = parseFloat(this.stockToReceive);
     if (isNaN(qty) || qty <= 0) {
-      alert("Por favor, ingrese un número mayor a cero.");
+      this.stateService.alert("Monto inválido", "Por favor, ingrese un número mayor a cero.");
       return;
     }
 
     this.stateService.recibirStockRapido(insId, qty);
     this.showStockModal.set(null);
     this.stockToReceive = '5';
-    alert("Recepción de stock guardada e inmutada en auditoría [✓]");
+    this.stateService.alert("Stock Actualizado", "Recepción de stock guardada e inmutada en auditoría [✓]");
   }
 
   handleStockWithdraw() {
@@ -153,20 +163,20 @@ export class AdminCatalogComponent {
     if (!insId) return;
     const qty = parseFloat(this.stockToWithdraw);
     if (isNaN(qty) || qty <= 0) {
-      alert("Por favor, ingrese un número mayor a cero.");
+      this.stateService.alert("Monto inválido", "Por favor, ingrese un número mayor a cero.");
       return;
     }
 
     this.stateService.retirarStockRapido(insId, qty);
     this.showWithdrawModal.set(null);
     this.stockToWithdraw = '1';
-    alert("Retiro de stock guardado exitosamente [✓]");
+    this.stateService.alert("Stock Actualizado", "Retiro de stock guardado exitosamente [✓]");
   }
 
   handleSaveDirectStock(insumoId: string) {
     const newVal = parseFloat(this.directStockValue);
     if (isNaN(newVal) || newVal < 0) {
-      alert("Por favor, ingrese un nivel de stock válido (número no negativo).");
+      this.stateService.alert("Monto inválido", "Por favor, ingrese un nivel de stock válido (número no negativo).");
       return;
     }
     this.stateService.actualizarInsumo(insumoId, { stock: newVal });
@@ -175,15 +185,23 @@ export class AdminCatalogComponent {
   }
 
   handleDeleteProduct(id: string, name: string) {
-    if (confirm(`¿Desactivar "${name}" del menú comercial?`)) {
-      this.stateService.eliminarProducto(id);
-    }
+    this.stateService.confirm(
+      'Desactivar Producto',
+      `¿Desactivar "${name}" del menú comercial?`,
+      () => {
+        this.stateService.eliminarProducto(id);
+      }
+    );
   }
 
   handleDeleteInsumo(id: string, name: string) {
-    if (confirm(`¿Eliminar definitivamente "${name}" de las existencias del almacén?`)) {
-      this.stateService.eliminarInsumo(id);
-    }
+    this.stateService.confirm(
+      'Eliminar Insumo',
+      `¿Eliminar definitivamente "${name}" de las existencias del almacén?`,
+      () => {
+        this.stateService.eliminarInsumo(id);
+      }
+    );
   }
 
   // Stock Visual Equivalencies

@@ -82,6 +82,7 @@ export class AdminLayoutComponent implements OnInit {
     { name: "Indicadores Generales", href: "/admin", icon: "layout-dashboard", exact: true },
     { name: "Gestión de Catálogo (Menú)", href: "/admin/inventario", icon: "package", exact: false },
     { name: "Temporadas y Ajustes", href: "/admin/reportes", icon: "calendar-range", exact: false },
+    { name: "Gestión de Vendedores", href: "/admin/vendedores", icon: "user", exact: false },
   ];
 
   constructor() {
@@ -96,7 +97,7 @@ export class AdminLayoutComponent implements OnInit {
   ngOnInit() {
     // Asegurar sesión admin al cargar
     if (!this.vendedorActivo()) {
-      this.stateService.setVendedorActivo("Administrador");
+      this.stateService.setVendedorActivo("Administrador", "administrador");
       this.stateService.abrirCaja(150.0);
     }
   }

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { POSStateService } from '../../../core/services/pos-state.service';
+import { BluetoothPrinterService } from '../../../core/services/bluetooth-printer.service';
 import { KeypadModalComponent } from '../keypad-modal/keypad-modal.component';
 import { filter } from 'rxjs/operators';
 
@@ -55,50 +56,79 @@ import { filter } from 'rxjs/operators';
         <!-- Navigation Menu -->
         <nav class="flex flex-col gap-2">
           @for (item of menuItems; track item.href) {
-            <a
-              [routerLink]="item.href"
-              (click)="handleNavClick(item.href, $event)"
-              [ngClass]="[
-                isCollapsed() ? 'p-3.5 justify-center' : 'px-4 py-3.5',
-                isActive(item.href, item.exact)
-                  ? 'bg-verde-oscuro text-crema shadow-lg shadow-verde-oscuro/15'
-                  : 'text-verde-oscuro/70 hover:bg-verde-oscuro/5 hover:text-verde-oscuro'
-              ]"
-              class="flex items-center gap-4 rounded-2xl transition-all duration-200 group relative cursor-pointer"
-              [title]="isCollapsed() ? item.name : ''"
-            >
-              <lucide-icon [name]="item.icon" size="20"
-                           [ngClass]="isActive(item.href, item.exact) ? 'text-crema shrink-0' : 'text-verde-oscuro/60 group-hover:text-verde-oscuro shrink-0'"></lucide-icon>
-              
-              @if (!isCollapsed()) {
-                <div class="fade-in">
-                  <p class="text-xs font-black leading-none">{{ item.name }}</p>
-                  <p [ngClass]="isActive(item.href, item.exact) ? 'text-crema/60 font-medium' : 'text-verde-oscuro/40 font-semibold group-hover:text-verde-oscuro/50'"
-                     class="text-[9px] mt-1">
-                    {{ item.description }}
-                  </p>
-                </div>
-              }
-
-              @if (isActive(item.href, item.exact)) {
+            @if (item.href !== '/admin' || rolActivo() === 'administrador') {
+              <a
+                [routerLink]="item.href"
+                (click)="handleNavClick(item.href, $event)"
+                [ngClass]="[
+                  isCollapsed() ? 'p-3.5 justify-center' : 'px-4 py-3.5',
+                  isActive(item.href, item.exact)
+                    ? 'bg-verde-oscuro text-crema shadow-lg shadow-verde-oscuro/15'
+                    : 'text-verde-oscuro/70 hover:bg-verde-oscuro/5 hover:text-verde-oscuro'
+                ]"
+                class="flex items-center gap-4 rounded-2xl transition-all duration-200 group relative cursor-pointer"
+                [title]="isCollapsed() ? item.name : ''"
+              >
+                <lucide-icon [name]="item.icon" size="20"
+                             [ngClass]="isActive(item.href, item.exact) ? 'text-crema shrink-0' : 'text-verde-oscuro/60 group-hover:text-verde-oscuro shrink-0'"></lucide-icon>
+                
                 @if (!isCollapsed()) {
-                  <span class="absolute right-3 w-1.5 h-1.5 rounded-full bg-naranja"></span>
-                } @else {
-                  <span class="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-4 rounded-r-md bg-naranja"></span>
+                  <div class="fade-in">
+                    <p class="text-xs font-black leading-none">{{ item.name }}</p>
+                    <p [ngClass]="isActive(item.href, item.exact) ? 'text-crema/60 font-medium' : 'text-verde-oscuro/40 font-semibold group-hover:text-verde-oscuro/50'"
+                       class="text-[9px] mt-1">
+                      {{ item.description }}
+                    </p>
+                  </div>
                 }
-              }
-            </a>
+
+                @if (isActive(item.href, item.exact)) {
+                  @if (!isCollapsed()) {
+                    <span class="absolute right-3 w-1.5 h-1.5 rounded-full bg-naranja"></span>
+                  } @else {
+                    <span class="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-4 rounded-r-md bg-naranja"></span>
+                  }
+                }
+              </a>
+            }
           }
         </nav>
       </div>
 
       <!-- Footer Actions -->
       <div class="flex flex-col gap-3">
+        <!-- Botón de Conexión Bluetooth para Ticketera -->
+        <button
+          (click)="togglePrinter()"
+          [ngClass]="[
+            isCollapsed() ? 'p-3.5 justify-center' : 'px-4 py-3.5',
+            printerService.connectionStatus() === 'connected'
+              ? 'bg-[#49882C]/10 text-[#49882C] border-[#49882C]/30 hover:bg-[#49882C]/20'
+              : printerService.connectionStatus() === 'connecting'
+              ? 'bg-naranja/10 text-naranja border border-naranja/30 animate-pulse'
+              : 'bg-verde-oscuro/5 text-verde-oscuro/70 border border-verde-oscuro/10 hover:bg-verde-oscuro/10'
+          ]"
+          class="flex items-center gap-3 w-full rounded-2xl border transition-all font-bold text-xs cursor-pointer"
+          [title]="isCollapsed() ? (printerService.connectionStatus() === 'connected' ? 'Desconectar Ticketera (' + printerService.deviceName() + ')' : 'Conectar Ticketera') : ''"
+        >
+          <lucide-icon name="bluetooth" size="16" class="shrink-0" [ngClass]="printerService.connectionStatus() === 'connected' ? 'text-[#49882C]' : printerService.connectionStatus() === 'connecting' ? 'text-naranja' : 'text-verde-oscuro/60'"></lucide-icon>
+          @if (!isCollapsed()) {
+            <div class="flex-1 text-left fade-in overflow-hidden">
+              <p class="leading-none text-[10px] font-black uppercase">
+                {{ printerService.connectionStatus() === 'connected' ? 'Conectado' : printerService.connectionStatus() === 'connecting' ? 'Conectando...' : 'Sin Conexión' }}
+              </p>
+              <p class="text-[9px] font-semibold opacity-75 mt-0.5 truncate">
+                {{ printerService.connectionStatus() === 'connected' ? printerService.deviceName() : 'Vincular Ticketera' }}
+              </p>
+            </div>
+          }
+        </button>
+
         @if (vendedorActivo()) {
           <button
             (click)="handleLogout()"
-            [ngClass]="isCollapsed() ? 'p-3.5' : 'px-4 py-3.5'"
-            class="flex items-center justify-center gap-3 w-full rounded-2xl bg-naranja/10 hover:bg-naranja/15 text-naranja border border-naranja/20 transition-all font-bold text-xs cursor-pointer"
+            [ngClass]="isCollapsed() ? 'p-3.5 justify-center' : 'px-4 py-3.5'"
+            class="flex items-center justify-center gap-3 w-full rounded-2xl bg-naranja/10 hover:bg-naranja/15 text-naranja border border-naranja/20 transition-all font-bold text-xs cursor-pointer font-bold"
             [title]="isCollapsed() ? 'Cerrar Turno' : ''"
           >
             <lucide-icon name="log-out" size="16" class="shrink-0"></lucide-icon>
@@ -126,14 +156,26 @@ import { filter } from 'rxjs/operators';
 export class SidebarComponent {
   private stateService = inject(POSStateService);
   private router = inject(Router);
+  printerService = inject(BluetoothPrinterService);
 
   vendedorActivo = this.stateService.vendedorActivo;
+  rolActivo = this.stateService.rolActivo;
   
   isCollapsed = signal<boolean>(false);
   showAdminPasscode = signal<boolean>(false);
   targetUrl = signal<string>('');
 
   currentUrl = signal<string>('');
+
+  async togglePrinter() {
+    if (this.printerService.connectionStatus() === 'connected') {
+      await this.printerService.disconnect();
+    } else {
+      this.printerService.connect().catch(err => {
+        this.stateService.alert('Error de Conexión', err.message || 'No se pudo conectar a la ticketera.');
+      });
+    }
+  }
 
   menuItems = [
     { name: "Terminal POS", href: "/pos", icon: "shopping-cart", description: "Ventas y Carrito", exact: true },
@@ -161,8 +203,8 @@ export class SidebarComponent {
   handleNavClick(href: string, event: Event) {
     if (href.startsWith('/admin')) {
       event.preventDefault();
-      // Si ya está como admin, ir directo
-      if (this.vendedorActivo() === 'Administrador') {
+      // Si ya es admin, ir directo sin pedir clave
+      if (this.rolActivo() === 'administrador') {
         this.router.navigate([href]);
       } else {
         this.targetUrl.set(href);
@@ -175,16 +217,20 @@ export class SidebarComponent {
     this.showAdminPasscode.set(false);
     const url = this.targetUrl();
     if (url) {
-      this.stateService.setVendedorActivo('Administrador');
+      this.stateService.setVendedorActivo('Administrador', 'administrador');
       this.stateService.abrirCaja(150.0); // Abre caja inicial si pasa a admin
       this.router.navigate([url]);
     }
   }
 
   handleLogout() {
-    if (confirm("¿Está seguro de que desea cerrar el turno y la caja actual?")) {
-      this.stateService.cerrarCaja(this.stateService.cajaFondoInicial() + this.stateService.cajaMetodoVentas().efectivo);
-      this.router.navigate(['/']);
-    }
+    this.stateService.confirm(
+      'Cerrar Turno',
+      '¿Está seguro de que desea cerrar el turno y la caja actual?',
+      () => {
+        this.stateService.cerrarCaja(this.stateService.cajaFondoInicial() + this.stateService.cajaMetodoVentas().efectivo);
+        this.router.navigate(['/']);
+      }
+    );
   }
 }

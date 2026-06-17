@@ -1,1 +1,39 @@
 <router-outlet></router-outlet>
+
+@if (alertState()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-verde-oscuro/40 backdrop-blur-sm p-4 animate-fade-in">
+    <div class="bg-[#FFFDF6] border border-verde-oscuro/15 text-verde-oscuro w-full max-w-[280px] rounded-[24px] flex flex-col overflow-hidden text-center shadow-2xl animate-scale-up">
+      <div class="p-6 flex flex-col gap-1.5">
+        <h4 class="text-base font-black leading-tight tracking-tight text-verde-oscuro">{{ alertState()?.title }}</h4>
+        <p class="text-xs leading-normal tracking-normal text-verde-oscuro/70 font-semibold mt-1">{{ alertState()?.message }}</p>
+      </div>
+
+      @if (alertState()?.type === 'prompt') {
+        <div class="px-6 pb-5">
+          <input
+            type="text"
+            [(ngModel)]="promptVal"
+            [placeholder]="alertState()?.placeholder || ''"
+            class="w-full bg-white border border-verde-oscuro/15 rounded-xl px-3 py-2 text-xs font-bold text-verde-oscuro outline-none text-center focus:border-naranja focus:ring-1 focus:ring-naranja"
+            required
+          />
+        </div>
+      }
+      
+      <div class="flex border-t border-verde-oscuro/10 select-none">
+        @if (alertState()?.type === 'confirm' || alertState()?.type === 'prompt') {
+          <button (click)="cancelAlert()" class="flex-1 py-4 text-sm text-verde-oscuro/60 hover:text-verde-oscuro hover:bg-verde-oscuro/5 active:bg-verde-oscuro/10 border-r border-verde-oscuro/10 outline-none cursor-pointer font-bold">
+            {{ alertState()?.cancelText || 'Cancelar' }}
+          </button>
+          <button (click)="confirmAlert()" class="flex-1 py-4 text-sm text-naranja hover:text-naranja/90 hover:bg-verde-oscuro/5 active:bg-verde-oscuro/10 outline-none cursor-pointer font-black">
+            {{ alertState()?.confirmText || 'Aceptar' }}
+          </button>
+        } @else {
+          <button (click)="confirmAlert()" class="w-full py-4 text-sm text-naranja hover:text-naranja/90 hover:bg-verde-oscuro/5 active:bg-verde-oscuro/10 outline-none cursor-pointer font-black">
+            {{ alertState()?.confirmText || 'Aceptar' }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}

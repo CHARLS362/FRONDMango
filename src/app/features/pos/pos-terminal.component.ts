@@ -144,6 +144,20 @@ export class PosTerminalComponent implements OnInit {
     this.stateService.seleccionarPedido(id);
   }
 
+  handleCancelarPedidoClick() {
+    const selId = this.pedidoSeleccionadoId();
+    if (selId === null) return;
+
+    this.stateService.confirm(
+      "Cancelar Pedido",
+      `¿Está seguro de que desea cancelar el pedido N° ${selId}? Esta acción se registrará en las auditorías del sistema.`,
+      () => {
+        this.stateService.cancelarPedido(selId);
+        this.stateService.alert("Pedido Cancelado", `El pedido N° ${selId} ha sido cancelado.`);
+      }
+    );
+  }
+
   handleUpdateOrderData(cliente: string, obs: string) {
     const selId = this.pedidoSeleccionadoId();
     if (selId) {
@@ -286,7 +300,7 @@ export class PosTerminalComponent implements OnInit {
     const total = baseTotal + surcharge;
 
     if (this.pedidoPaymentMethod() === 'EFECTIVO' && cash < total) {
-      alert("El efectivo recibido es menor que el total del pedido.");
+      this.stateService.alert("Monto insuficiente", "El efectivo recibido es menor que el total del pedido.");
       return;
     }
 
@@ -324,7 +338,7 @@ export class PosTerminalComponent implements OnInit {
   handleAbrirCajaAction() {
     const fondo = parseFloat(this.fondoInicialInput());
     if (isNaN(fondo) || fondo < 0) {
-      alert("Por favor ingrese un fondo inicial válido.");
+      this.stateService.alert("Fondo Inicial", "Por favor ingrese un fondo inicial válido.");
       return;
     }
     this.stateService.abrirCaja(fondo);

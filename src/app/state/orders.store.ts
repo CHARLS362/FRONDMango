@@ -1,5 +1,7 @@
 import { Injectable, signal, inject, effect } from '@angular/core';
 import { LocalStorageService } from '../core/infrastructure/local-storage.service';
+import { ApiService } from '../core/services/api.service';
+import { environment } from '../../environments/environment';
 import type { CartItem, OrdenActiva } from '../core/domain/order.model';
 import type { AuditLog } from '../core/domain/audit.model';
 
@@ -8,6 +10,7 @@ import type { AuditLog } from '../core/domain/audit.model';
 })
 export class OrdersStore {
   private storage = inject(LocalStorageService);
+  private apiService = inject(ApiService);
 
   // --- Signals ---
   ordenesActivas = signal<OrdenActiva[]>(this.storage.load('ordenesActivas', []));
@@ -17,6 +20,20 @@ export class OrdersStore {
   ticketGlobalCorrelativo = signal<number>(this.storage.load('ticketGlobalCorrelativo', 1));
 
   constructor() {
+    // One-time cleanup to clear old backend-synced orders and restart local queue
+    if (!this.storage.load('v1_local_reset', false)) {
+      this.ordenesActivas.set([]);
+      this.ticketGlobalCorrelativo.set(1);
+      this.storage.save('v1_local_reset', true);
+    }
+
+    if (environment.useBackend) {
+      this.apiService.getOrdenesActivas().subscribe({
+        next: (data) => this.ordenesActivas.set(data),
+        error: (err) => console.error('Error fetching active orders from backend:', err)
+      });
+    }
+
     effect(() => this.storage.save('ordenesActivas', this.ordenesActivas()));
     effect(() => this.storage.save('ticketGlobalCorrelativo', this.ticketGlobalCorrelativo()));
   }
@@ -49,10 +66,10 @@ export class OrdersStore {
   // --- Orders CRUD ---
 
   crearNuevoPedido(vendedorActivo: string): string {
-    const id = this.ticketGlobalCorrelativo().toString();
+    const tempId = this.ticketGlobalCorrelativo().toString();
     const nuevaOrden: OrdenActiva = {
-      id,
-      numeroPedido: id,
+      id: tempId,
+      numeroPedido: tempId,
       carrito: [],
       vendedor: vendedorActivo || 'Vendedor',
       horaApertura: new Date().toLocaleTimeString(),
@@ -67,17 +84,67 @@ export class OrdersStore {
     };
 
     this.ordenesActivas.update(prev => [...prev, nuevaOrden]);
-    this.pedidoSeleccionadoId.set(id);
+    this.pedidoSeleccionadoId.set(tempId);
     this.carrito.set([]);
     this.ticketGlobalCorrelativo.update(prev => prev + 1);
 
-    return id;
+    if (environment.useBackend) {
+      this.apiService.crearOrden(nuevaOrden).subscribe({
+        next: (realId) => {
+          this.ordenesActivas.update(prev =>
+            prev.map(o => o.id === tempId ? { ...o, id: realId } : o)
+          );
+          if (this.pedidoSeleccionadoId() === tempId) {
+            this.pedidoSeleccionadoId.set(realId);
+          }
+        },
+        error: (err) => console.error('Error creating order in backend:', err)
+      });
+    }
+
+    return tempId;
   }
 
   limpiarOrdenesActivas() {
     this.ordenesActivas.set([]);
     this.pedidoSeleccionadoId.set(null);
     this.carrito.set([]);
+    this.ticketGlobalCorrelativo.set(1);
+  }
+
+  cancelarPedido(pedidoId: string, vendedorActivo: string | null): AuditLog | null {
+    const ord = this.ordenesActivas().find(o => o.id === pedidoId);
+    if (!ord) return null;
+
+    // Eliminar de las órdenes activas
+    this.ordenesActivas.update(prev => prev.filter(o => o.id !== pedidoId));
+
+    // Si estaba seleccionado, quitar selección
+    if (this.pedidoSeleccionadoId() === pedidoId) {
+      this.pedidoSeleccionadoId.set(null);
+      this.carrito.set([]);
+    }
+
+    // Corregir la numeración si se canceló el último pedido creado
+    const numId = parseInt(pedidoId, 10);
+    if (!isNaN(numId) && numId === this.ticketGlobalCorrelativo() - 1) {
+      this.ticketGlobalCorrelativo.update(prev => Math.max(1, prev - 1));
+    }
+
+    if (environment.useBackend) {
+      this.apiService.eliminarOrden(pedidoId).subscribe({
+        error: (err) => console.error('Error canceling order in backend:', err)
+      });
+    }
+
+    // Retorna el log para auditar la cancelación
+    return {
+      id: `audit-${Date.now()}`,
+      fecha: new Date().toLocaleString(),
+      tipo: 'STOCK',
+      descripcion: `PEDIDO CANCELADO: Pedido N° ${pedidoId} fue cancelado por ${vendedorActivo || 'Vendedor'}. Cliente: ${ord.clienteNombre || 'S/N'}.`,
+      detalles: { pedidoId, cliente: ord.clienteNombre, items: ord.carrito, vendedor: vendedorActivo }
+    };
   }
 
   // --- Cart Operations ---
@@ -162,6 +229,7 @@ export class OrdersStore {
     this.ordenesActivas.update(prev =>
       prev.map(o => o.id === pedidoId ? { ...o, clienteNombre: cliente, observaciones: obs } : o)
     );
+    this._updateOrderOnBackend(pedidoId);
   }
 
   actualizarEmpaquePedido(pedidoId: string, empaque: 'BOLSA' | 'VASO') {
@@ -169,6 +237,7 @@ export class OrdersStore {
     this.ordenesActivas.update(prev =>
       prev.map(o => o.id === pedidoId ? { ...o, empaque, recargoEmpaque: recargo } : o)
     );
+    this._updateOrderOnBackend(pedidoId);
   }
 
   enviarPedidoCocina(pedidoId: string, vendedorActivo: string | null): AuditLog | null {
@@ -181,6 +250,8 @@ export class OrdersStore {
       prev.map(o => o.id === pedidoId ? { ...o, carrito: snapshotCarrito, enviadoCocina: true } : o)
     );
     this.carrito.set(snapshotCarrito);
+
+    this._updateOrderOnBackend(pedidoId);
 
     return {
       id: `audit-${Date.now()}`,
@@ -209,6 +280,8 @@ export class OrdersStore {
       const ord = this.ordenesActivas().find(o => o.id === pedidoId);
       if (ord) this.carrito.set(ord.carrito);
     }
+
+    this._updateOrderOnBackend(pedidoId);
   }
 
   subsanarOrdenPedido(pedidoId: string, vendedorActivo: string | null): { sufijo: string; auditLog: AuditLog } | null {
@@ -226,6 +299,8 @@ export class OrdersStore {
     );
     this.carrito.set(snapshotCarrito);
 
+    this._updateOrderOnBackend(pedidoId);
+
     return {
       sufijo,
       auditLog: {
@@ -238,8 +313,13 @@ export class OrdersStore {
     };
   }
 
-  eliminarOrden(pedidoId: string) {
+  eliminarOrden(pedidoId: string, completado: boolean = false) {
     this.ordenesActivas.update(prev => prev.filter(o => o.id !== pedidoId));
+    if (environment.useBackend && !completado) {
+      this.apiService.eliminarOrden(pedidoId).subscribe({
+        error: (err) => console.error('Error deleting order in backend:', err)
+      });
+    }
   }
 
   incrementarCorrelativo() {
@@ -254,6 +334,18 @@ export class OrdersStore {
       this.ordenesActivas.update(prev =>
         prev.map(o => o.id === selId ? { ...o, carrito: nuevoCarrito } : o)
       );
+      this._updateOrderOnBackend(selId);
+    }
+  }
+
+  private _updateOrderOnBackend(pedidoId: string) {
+    if (environment.useBackend) {
+      const ord = this.ordenesActivas().find(o => o.id === pedidoId);
+      if (ord) {
+        this.apiService.actualizarOrden(pedidoId, ord).subscribe({
+          error: (err) => console.error(`Error updating order ${pedidoId} in backend:`, err)
+        });
+      }
     }
   }
 }

@@ -278,33 +278,40 @@ export class AdminDashboardComponent {
   ];
 
   handleCerrarCaja() {
-    const cashReal = prompt("Ingrese el monto REAL de efectivo en caja para realizar el Arqueo:", (this.cajaFondoInicial() + this.totalEfectivo()).toString());
-    if (cashReal === null) return;
-    
-    const cashRealNum = parseFloat(cashReal);
-    if (isNaN(cashRealNum)) {
-      alert("Por favor, ingrese un monto numérico válido.");
-      return;
-    }
+    const defaultAmount = (this.cajaFondoInicial() + this.totalEfectivo()).toString();
+    this.stateService.prompt(
+      'Arqueo de Caja',
+      'Ingrese el monto REAL de efectivo en caja para realizar el Arqueo:',
+      defaultAmount,
+      'Monto en efectivo',
+      (cashReal) => {
+        if (cashReal === null || cashReal === undefined) return;
+        const cashRealNum = parseFloat(cashReal);
+        if (isNaN(cashRealNum)) {
+          this.stateService.alert("Monto inválido", "Por favor, ingrese un monto numérico válido.");
+          return;
+        }
 
-    const { diferencia, balance } = this.stateService.cerrarCaja(cashRealNum);
-    
-    let mensaje = `Cierre de turno completado con éxito.\n\n`;
-    mensaje += `Total Ventas: S/. ${balance.totalVentas.toFixed(2)}\n`;
-    mensaje += `Efectivo Esperado: S/. ${balance.teoricoEfectivo.toFixed(2)}\n`;
-    mensaje += `Efectivo Real Ingresado: S/. ${balance.realEfectivo.toFixed(2)}\n`;
-    mensaje += `Diferencia de Arqueo: S/. ${balance.diferencia.toFixed(2)}\n\n`;
-    
-    if (diferencia === 0) {
-      mensaje += `Caja cuadrada perfectamente [✓]`;
-    } else if (diferencia > 0) {
-      mensaje += `Sobrante en caja de S/. ${diferencia.toFixed(2)} [!]`;
-    } else {
-      mensaje += `Faltante en caja de S/. ${Math.abs(diferencia).toFixed(2)} [!]`;
-    }
+        const { diferencia, balance } = this.stateService.cerrarCaja(cashRealNum);
+        
+        let mensaje = `Total Ventas: S/. ${balance.totalVentas.toFixed(2)}\n`;
+        mensaje += `Efectivo Esperado: S/. ${balance.teoricoEfectivo.toFixed(2)}\n`;
+        mensaje += `Efectivo Real: S/. ${balance.realEfectivo.toFixed(2)}\n`;
+        mensaje += `Diferencia: S/. ${balance.diferencia.toFixed(2)}\n\n`;
+        
+        if (diferencia === 0) {
+          mensaje += `Caja cuadrada perfectamente [✓]`;
+        } else if (diferencia > 0) {
+          mensaje += `Sobrante en caja de S/. ${diferencia.toFixed(2)} [!]`;
+        } else {
+          mensaje += `Faltante en caja de S/. ${Math.abs(diferencia).toFixed(2)} [!]`;
+        }
 
-    alert(mensaje);
-    this.router.navigate(['/']); // Volver al inicio de turno
+        this.stateService.alert("Turno Cerrado", mensaje, () => {
+          this.router.navigate(['/']);
+        });
+      }
+    );
   }
 
   formatStock(val: number): string {

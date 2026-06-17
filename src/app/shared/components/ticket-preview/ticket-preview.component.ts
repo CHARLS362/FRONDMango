@@ -1,8 +1,9 @@
 import { Component, Input, Output, EventEmitter, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
-import { CartItem } from '../../../core/models/pos.models';
+import { CartItem, TicketVenta } from '../../../core/models/pos.models';
 import { POSStateService } from '../../../core/services/pos-state.service';
+import { BluetoothPrinterService } from '../../../core/services/bluetooth-printer.service';
 
 @Component({
   selector: 'app-ticket-preview',
@@ -584,20 +585,31 @@ import { POSStateService } from '../../../core/services/pos-state.service';
 
           <!-- Action Buttons -->
           @if (!printed()) {
-            <div class="flex gap-3 w-full shrink-0">
-              <button
-                (click)="onClose()"
-                class="flex-1 bg-white hover:bg-gray-100 border border-gray-300 py-3 rounded-2xl font-bold text-xs text-gray-700 active:scale-95 transition-all text-center cursor-pointer"
-              >
-                Cerrar Vista
-              </button>
-              <button
-                (click)="handlePrint()"
-                class="flex-1 bg-naranja hover:bg-naranja/90 py-3 rounded-2xl font-bold text-xs text-white shadow-lg shadow-naranja/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <lucide-icon name="printer" size="14"></lucide-icon>
-                Imprimir Ticket
-              </button>
+            <div class="flex flex-col gap-2.5 w-full shrink-0">
+              @if (printerService.connectionStatus() !== 'connected') {
+                <div class="bg-naranja/5 border border-naranja/20 text-naranja text-[10px] p-2.5 rounded-xl text-center font-bold">
+                  ⚠️ Ticketera Bluetooth desconectada. Se simulará la impresión. Conéctela en el menú lateral.
+                </div>
+              } @else {
+                <div class="bg-[#49882C]/10 border border-[#49882C]/20 text-[#49882C] text-[10px] p-2.5 rounded-xl text-center font-bold">
+                  ✓ Ticketera Conectada: {{ printerService.deviceName() }}
+                </div>
+              }
+              <div class="flex gap-3 w-full">
+                <button
+                  (click)="onClose()"
+                  class="flex-1 bg-white hover:bg-gray-100 border border-gray-300 py-3 rounded-2xl font-bold text-xs text-gray-700 active:scale-95 transition-all text-center cursor-pointer"
+                >
+                  Cerrar Vista
+                </button>
+                <button
+                  (click)="handlePrint()"
+                  class="flex-1 bg-naranja hover:bg-naranja/90 py-3 rounded-2xl font-bold text-xs text-white shadow-lg shadow-naranja/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <lucide-icon name="printer" size="14"></lucide-icon>
+                  {{ printerService.connectionStatus() === 'connected' ? 'Imprimir Ticketera' : 'Imprimir (Simulado)' }}
+                </button>
+              </div>
             </div>
           }
         </div>
@@ -607,6 +619,7 @@ import { POSStateService } from '../../../core/services/pos-state.service';
 })
 export class TicketPreviewComponent {
   private stateService = inject(POSStateService);
+  printerService = inject(BluetoothPrinterService);
 
   @Input() isOpen: boolean = false;
   @Input() tipoTicket: "CONTROL" | "PARA LLEVAR" | "VENTA FINAL" | "SUBSANADO" = "CONTROL";
@@ -677,12 +690,44 @@ export class TicketPreviewComponent {
     return val.toFixed(2).endsWith(".00") ? val.toFixed(0) : val.toFixed(2);
   }
 
-  handlePrint() {
-    this.printed.set(true);
-    setTimeout(() => {
-      this.printed.set(false);
-      this.close.emit();
-    }, 2000);
+  async handlePrint() {
+    if (this.printerService.connectionStatus() === 'connected') {
+      try {
+        const recargo = this.hasRecargoVaso() ? 1.0 : 0.0;
+        const ticketToPrint: TicketVenta = {
+          id: this.tipoTicket === 'VENTA FINAL' ? this.boletaCorrelativa() : this.ticketNumber,
+          fecha: `${this.dateString()} ${this.timeString()}`,
+          total: this.total,
+          metodoPago: this.metodoPago,
+          items: this.items,
+          vendedor: this.vendedor,
+          clienteNombre: this.finalCliente(),
+          observaciones: this.finalObservaciones(),
+          modoServicio: this.finalModoServicio() as "MESA" | "LLEVAR",
+          pagado: this.pagado,
+          vuelto: this.vuelto,
+          empaque: this.empaque || 'BOLSA',
+          recargoEmpaque: recargo
+        };
+        await this.printerService.printTicket(ticketToPrint);
+        
+        // Exito
+        this.printed.set(true);
+        setTimeout(() => {
+          this.printed.set(false);
+          this.close.emit();
+        }, 2000);
+      } catch (error: any) {
+        this.stateService.alert('Error de Impresión', 'Ocurrió un error al enviar el ticket a la ticketera: ' + (error.message || error));
+      }
+    } else {
+      // Simulado
+      this.printed.set(true);
+      setTimeout(() => {
+        this.printed.set(false);
+        this.close.emit();
+      }, 2000);
+    }
   }
 
   onClose() {

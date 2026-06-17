@@ -1,5 +1,7 @@
 import { Injectable, signal, inject, effect } from '@angular/core';
 import { LocalStorageService } from '../core/infrastructure/local-storage.service';
+import { ApiService } from '../core/services/api.service';
+import { environment } from '../../environments/environment';
 import type { TicketVenta } from '../core/domain/ticket.model';
 import type { AuditLog } from '../core/domain/audit.model';
 
@@ -8,12 +10,24 @@ import type { AuditLog } from '../core/domain/audit.model';
 })
 export class TicketsStore {
   private storage = inject(LocalStorageService);
+  private apiService = inject(ApiService);
 
   // --- Signals ---
   historialTickets = signal<TicketVenta[]>(this.storage.load('historialTickets', []));
   auditorias = signal<AuditLog[]>(this.storage.load('auditorias', []));
 
   constructor() {
+    if (environment.useBackend) {
+      this.apiService.getTickets().subscribe({
+        next: (data) => this.historialTickets.set(data),
+        error: (err) => console.error('Error fetching tickets from backend:', err)
+      });
+      this.apiService.getAuditorias().subscribe({
+        next: (data) => this.auditorias.set(data),
+        error: (err) => console.error('Error fetching audits from backend:', err)
+      });
+    }
+
     effect(() => this.storage.save('historialTickets', this.historialTickets()));
     effect(() => this.storage.save('auditorias', this.auditorias()));
   }
@@ -22,10 +36,20 @@ export class TicketsStore {
 
   agregarTicket(ticket: TicketVenta) {
     this.historialTickets.update(prev => [ticket, ...prev]);
+    if (environment.useBackend) {
+      this.apiService.crearTicket(ticket).subscribe({
+        error: (err) => console.error('Error saving ticket in backend:', err)
+      });
+    }
   }
 
   agregarAuditoria(log: AuditLog) {
     this.auditorias.update(prev => [log, ...prev]);
+    if (environment.useBackend) {
+      this.apiService.crearAuditoria(log).subscribe({
+        error: (err) => console.error('Error saving audit in backend:', err)
+      });
+    }
   }
 
   anularVenta(logId: string): {
@@ -61,6 +85,22 @@ export class TicketsStore {
     });
 
     this.auditorias.set([logAnulacion, ...nuevasAuditorias]);
+
+    if (environment.useBackend) {
+      this.apiService.anularTicket(targetLog.detalles.ticketId).subscribe({
+        next: () => {
+          this.apiService.getAuditorias().subscribe({
+            next: (data) => this.auditorias.set(data),
+            error: (err) => console.error('Error refreshing audits after void:', err)
+          });
+          this.apiService.getTickets().subscribe({
+            next: (data) => this.historialTickets.set(data),
+            error: (err) => console.error('Error refreshing tickets after void:', err)
+          });
+        },
+        error: (err) => console.error('Error voiding sale in backend:', err)
+      });
+    }
 
     return { total, metodoPago, items, ticketId: targetLog.detalles.ticketId };
   }

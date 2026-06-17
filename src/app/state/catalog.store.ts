@@ -1,5 +1,7 @@
 import { Injectable, signal, inject, effect } from '@angular/core';
 import { LocalStorageService } from '../core/infrastructure/local-storage.service';
+import { ApiService } from '../core/services/api.service';
+import { environment } from '../../environments/environment';
 import type { Product } from '../core/domain/product.model';
 
 const INITIAL_CARTA: Product[] = [
@@ -131,6 +133,7 @@ const INITIAL_CARTA: Product[] = [
 })
 export class CatalogStore {
   private storage = inject(LocalStorageService);
+  private apiService = inject(ApiService);
 
   carta = signal<Product[]>(this.storage.load('carta', INITIAL_CARTA));
 
@@ -148,18 +151,46 @@ export class CatalogStore {
       this.carta.set(mapped);
     }
 
+    if (environment.useBackend) {
+      this.apiService.getCarta().subscribe({
+        next: (data) => this.carta.set(data),
+        error: (err) => console.error('Error fetching catalog from backend:', err)
+      });
+    }
+
     effect(() => this.storage.save('carta', this.carta()));
   }
 
   crearProducto(p: Omit<Product, 'activo'>) {
-    this.carta.update(prev => [...prev, { ...p, activo: true }]);
+    if (environment.useBackend) {
+      this.apiService.crearProducto(p).subscribe({
+        next: (newProd) => this.carta.update(prev => [...prev, newProd]),
+        error: (err) => console.error('Error creating product in backend:', err)
+      });
+    } else {
+      this.carta.update(prev => [...prev, { ...p, activo: true }]);
+    }
   }
 
   actualizarProducto(id: string, fields: Partial<Product>) {
-    this.carta.update(prev => prev.map(p => p.id === id ? { ...p, ...fields } : p));
+    if (environment.useBackend) {
+      this.apiService.actualizarProducto(id, fields).subscribe({
+        next: () => this.carta.update(prev => prev.map(p => p.id === id ? { ...p, ...fields } : p)),
+        error: (err) => console.error('Error updating product in backend:', err)
+      });
+    } else {
+      this.carta.update(prev => prev.map(p => p.id === id ? { ...p, ...fields } : p));
+    }
   }
 
   eliminarProducto(id: string) {
-    this.carta.update(prev => prev.map(p => p.id === id ? { ...p, activo: false } : p));
+    if (environment.useBackend) {
+      this.apiService.eliminarProducto(id).subscribe({
+        next: () => this.carta.update(prev => prev.map(p => p.id === id ? { ...p, activo: false } : p)),
+        error: (err) => console.error('Error deleting product from backend:', err)
+      });
+    } else {
+      this.carta.update(prev => prev.map(p => p.id === id ? { ...p, activo: false } : p));
+    }
   }
 }
