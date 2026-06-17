@@ -102,7 +102,7 @@ export class BluetoothPrinterService {
     this.serialWriter = port.writable.getWriter();
 
     // Escuchar desconexión
-    navigator.serial.addEventListener('disconnect', (event: any) => {
+    (navigator as any).serial.addEventListener('disconnect', (event: any) => {
       if (event.target === this.serialPort) {
         console.log('[Serial] Dispositivo desconectado.');
         this.handleDisconnection();

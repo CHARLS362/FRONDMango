@@ -128,7 +128,7 @@ import { filter } from 'rxjs/operators';
           <button
             (click)="handleLogout()"
             [ngClass]="isCollapsed() ? 'p-3.5 justify-center' : 'px-4 py-3.5'"
-            class="flex items-center justify-center gap-3 w-full rounded-2xl bg-naranja/10 hover:bg-naranja/15 text-naranja border border-naranja/20 transition-all font-bold text-xs cursor-pointer font-bold"
+            class="flex items-center justify-center gap-3 w-full rounded-2xl bg-naranja/10 hover:bg-naranja/15 text-naranja border border-naranja/20 transition-all font-bold text-xs cursor-pointer"
             [title]="isCollapsed() ? 'Cerrar Turno' : ''"
           >
             <lucide-icon name="log-out" size="16" class="shrink-0"></lucide-icon>
